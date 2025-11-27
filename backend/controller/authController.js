@@ -1,9 +1,6 @@
-import React from 'react'
+const express = require('express');
+const cors = require('cors');
 
-const authController = () => {
-  return (
-    <div>authController</div>
-  )
-}
-
-export default authController
+const login = (req, res) => {
+    const { email, password } = req.body;
+};
