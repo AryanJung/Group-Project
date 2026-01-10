@@ -1,0 +1,25 @@
+{
+  "name": "rental-app",
+  "version": "1.0.0",
+  "description": "Rental Properties Application - Full Stack",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm start",
+    "start": "concurrently \"npm run server:prod\" \"npm run client:prod\"",
+    "server:prod": "cd backend && npm start",
+    "client:prod": "cd frontend && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "rental",
+    "properties",
+    "react",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC"
+}
