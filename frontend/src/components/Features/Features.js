@@ -1,7 +1,26 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import './Features.css';
 
 const Features = () => {
+  const sectionRef = useRef(null);
+
+  // Scroll animation setup
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
+    );
+
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const features = [
     {
       icon: '🔍',
@@ -36,7 +55,7 @@ const Features = () => {
   ];
 
   return (
-    <div className="features">
+    <div className="features scroll-animate" ref={sectionRef}>
       <div className="container">
         <div className="section-header">
           <h2 className="section-title">Why Choose Us</h2>

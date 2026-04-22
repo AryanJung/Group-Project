@@ -21,20 +21,7 @@ const About = () => {
               to ensure you have access to the best rental options in your
               desired location.
             </p>
-            <div className="about-stats">
-              <div className="stat-item">
-                <div className="stat-number">10,000+</div>
-                <div className="stat-label">Properties</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">50,000+</div>
-                <div className="stat-label">Happy Tenants</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">500+</div>
-                <div className="stat-label">Cities</div>
-              </div>
-            </div>
+
           </div>
           <div className="about-image">
             <div className="about-placeholder">

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProperties } from '../../context/PropertiesContext';
 import './Properties.css';
@@ -6,6 +6,24 @@ import './Properties.css';
 const Properties = () => {
   const { properties } = useProperties();
   const navigate = useNavigate();
+  const sectionRef = useRef(null);
+
+  // Scroll animation setup
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
+    );
+
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Filter and search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,7 +117,7 @@ const Properties = () => {
   const hasActiveFilters = locationFilter || minPrice || maxPrice || bedroomsFilter || bathroomsFilter || searchQuery;
 
   return (
-    <div className="properties">
+    <div className="properties scroll-animate" ref={sectionRef}>
       <div className="container">
         <div className="section-header">
           <h2 className="section-title">Featured Properties</h2>

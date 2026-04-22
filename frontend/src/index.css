@@ -4,19 +4,77 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont,
+    'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
-  color: #051747;
-  background: #E7E9F0;
+  color: #1a2a4e;
+  background: linear-gradient(135deg, #f8f9fc 0%, #eef1f8 100%);
+}
+
+/* Modern color scheme */
+:root {
+  --primary: #051747;
+  --primary-dark: #031029;
+  --primary-light: #0b2a5f;
+  --secondary: #6b5dd6;
+  --accent: #f97316;
+  --accent-light: #fb923c;
+  --bg-light: #fefefe;
+  --bg-subtle: #f8f9fc;
+  --text-primary: #1a2a4e;
+  --text-secondary: #535f80;
+  --border: #e2e8f0;
+  --shadow-sm: 0 2px 8px rgba(5, 23, 71, 0.08);
+  --shadow-md: 0 8px 20px rgba(5, 23, 71, 0.12);
+  --shadow-lg: 0 20px 40px rgba(5, 23, 71, 0.15);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--primary);
+}
+
+h1 {
+  font-size: 3.5rem;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 2.5rem;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1.75rem;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: rgba(5, 23, 71, 0.05);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+/* Focus styles for accessibility */
+button:focus,
+a:focus,
+input:focus,
+select:focus {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+a, button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

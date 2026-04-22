@@ -72,10 +72,9 @@ const Footer = () => {
           <div className="footer-section">
             <h4 className="footer-heading">Connect</h4>
             <div className="social-links">
-              <a href="#facebook" aria-label="Facebook">📘</a>
-              <a href="#twitter" aria-label="Twitter">🐦</a>
-              <a href="#instagram" aria-label="Instagram">📷</a>
-              <a href="#linkedin" aria-label="LinkedIn">💼</a>
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook">f</a>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" title="Twitter">𝕏</a>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" title="LinkedIn">ln</a>
             </div>
           </div>
         </div>
