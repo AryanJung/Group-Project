@@ -103,6 +103,22 @@ const PropertyDetail = () => {
               <button className="btn-talk-to-broker" onClick={handleTalkToBroker}>
                 💬 Talk to Broker
               </button>
+             <button 
+  className="btn-location" 
+  onClick={() => {
+    const { coordinates, location } = property;
+    
+    const hasCoords = coordinates && coordinates.lat && coordinates.lng;
+
+    const url = hasCoords
+      ? `https://www.google.com/maps/search/?api=1&query=${coordinates.lat},${coordinates.lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+      
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }}
+>
+  View exact location
+</button>
               <button className="btn-view" onClick={() => navigate('/')}>
                 View More Properties
               </button>
