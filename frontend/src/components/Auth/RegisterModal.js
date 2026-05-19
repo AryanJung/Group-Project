@@ -8,6 +8,7 @@ const RegisterModal = ({ onClose, onSwitchToLogin }) => {
     name: '',
     email: '',
     password: '',
+    role: 'renter',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,19 @@ const RegisterModal = ({ onClose, onSwitchToLogin }) => {
               onChange={handleChange}
               required
             />
+          </div>
+          <div className="form-group">
+            <label htmlFor="role">Register as</label>
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              required
+            >
+              <option value="renter">Renter</option>
+              <option value="owner">Owner</option>
+            </select>
           </div>
           <button type="submit" className="btn-submit" disabled={loading}>
             {loading ? 'Registering...' : 'Register'}
