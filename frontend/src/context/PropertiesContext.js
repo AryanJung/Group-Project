@@ -16,6 +16,8 @@ export const PropertiesProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const getPropertyId = (property) => property?.id ?? property?._id ?? null;
+
   // Load properties from backend on mount
   useEffect(() => {
     loadProperties();
@@ -36,68 +38,7 @@ export const PropertiesProvider = ({ children }) => {
         setProperties(JSON.parse(savedProperties));
       } else {
         // Initialize with default properties if no backend and no localStorage
-        const defaultProperties = [
-          {
-            id: 1,
-            title: 'Modern Apartment in Thamel',
-            location: 'Kathmandu, Bagmati',
-            price: 'Rs. 25,000/month',
-            bedrooms: 2,
-            bathrooms: 1,
-            area: '1,200 sq ft',
-            image: '🏢',
-          },
-          {
-            id: 2,
-            title: 'Luxury Villa with Garden',
-            location: 'Lalitpur, Bagmati',
-            price: 'Rs. 50,000/month',
-            bedrooms: 4,
-            bathrooms: 3,
-            area: '3,500 sq ft',
-            image: '🏡',
-          },
-          {
-            id: 3,
-            title: 'Cozy Studio Apartment',
-            location: 'Pokhara, Gandaki',
-            price: 'Rs. 12,000/month',
-            bedrooms: 1,
-            bathrooms: 1,
-            area: '600 sq ft',
-            image: '🏠',
-          },
-          {
-            id: 4,
-            title: 'Family House in Suburbs',
-            location: 'Bhaktapur, Bagmati',
-            price: 'Rs. 32,000/month',
-            bedrooms: 3,
-            bathrooms: 2,
-            area: '2,000 sq ft',
-            image: '🏘️',
-          },
-          {
-            id: 5,
-            title: 'Penthouse with Mountain View',
-            location: 'Kathmandu, Bagmati',
-            price: 'Rs. 80,000/month',
-            bedrooms: 3,
-            bathrooms: 2,
-            area: '2,800 sq ft',
-            image: '🏙️',
-          },
-          {
-            id: 6,
-            title: 'Charming Traditional House',
-            location: 'Patan, Lalitpur',
-            price: 'Rs. 18,000/month',
-            bedrooms: 2,
-            bathrooms: 1,
-            area: '1,000 sq ft',
-            image: '🏚️',
-          },
-        ];
+        const defaultProperties = [];
         setProperties(defaultProperties);
       }
     } finally {
@@ -148,7 +89,7 @@ export const PropertiesProvider = ({ children }) => {
     try {
       setError(null);
       await adminAPI.deleteProperty(id);
-      const updatedProperties = properties.filter((prop) => prop.id !== id);
+      const updatedProperties = properties.filter((prop) => String(getPropertyId(prop)) !== String(id));
       setProperties(updatedProperties);
       
       // Update localStorage as backup
@@ -160,7 +101,7 @@ export const PropertiesProvider = ({ children }) => {
       setError('Failed to delete property from backend');
       
       // Fallback to local state if backend fails
-      const updatedProperties = properties.filter((prop) => prop.id !== id);
+      const updatedProperties = properties.filter((prop) => String(getPropertyId(prop)) !== String(id));
       setProperties(updatedProperties);
       localStorage.setItem('properties', JSON.stringify(updatedProperties));
       
@@ -183,7 +124,7 @@ export const PropertiesProvider = ({ children }) => {
       
       const updated = await adminAPI.updateProperty(id, propertyData);
       const updatedProperties = properties.map((prop) => 
-        prop.id === id ? updated : prop
+        String(getPropertyId(prop)) === String(id) ? updated : prop
       );
       setProperties(updatedProperties);
       
@@ -197,7 +138,7 @@ export const PropertiesProvider = ({ children }) => {
       
       // Fallback to local state if backend fails
       const updatedProperties = properties.map((prop) => 
-        prop.id === id ? { ...updatedProperty, id } : prop
+        String(getPropertyId(prop)) === String(id) ? { ...updatedProperty, id } : prop
       );
       setProperties(updatedProperties);
       localStorage.setItem('properties', JSON.stringify(updatedProperties));
