@@ -35,21 +35,21 @@ const initializeDefaultUsers = () => {
       name: 'John Doe',
       email: 'john.doe@test.com',
       password: 'test123',
-      role: 'user'
+      role: 'renter'
     },
     {
       _id: 'user-2',
       name: 'Jane Smith',
       email: 'jane.smith@test.com',
       password: 'test123',
-      role: 'user'
+      role: 'renter'
     },
     {
       _id: 'user-3',
       name: 'Bob Wilson',
       email: 'bob.wilson@test.com',
       password: 'test123',
-      role: 'user'
+      role: 'renter'
     }
   ];
 
@@ -68,12 +68,15 @@ const getStoredUsers = () => {
 // Add new user to localStorage
 const addStoredUser = (userData) => {
   const users = getStoredUsers();
+  const role = userData.role === 'owner' || userData.role === 'admin'
+    ? userData.role
+    : 'renter';
   const newUser = {
     _id: `user-${Date.now()}`,
     name: userData.name,
     email: userData.email,
     password: userData.password,
-    role: 'user'
+    role,
   };
   users.push(newUser);
   localStorage.setItem('app_users', JSON.stringify(users));
@@ -109,20 +112,31 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      const normalizedUserData = {
+        ...userData,
+        role: userData.role === 'owner' || userData.role === 'admin'
+          ? userData.role
+          : 'renter',
+      };
+
       // Try backend first, fallback to localStorage
       let data;
       try {
-        data = await authAPI.register(userData);
+        data = await authAPI.register(normalizedUserData);
       } catch (error) {
         // Backend failed, use localStorage
-        data = addStoredUser(userData);
+        data = addStoredUser(normalizedUserData);
       }
 
       // Remove password from user object before storing
       const { password, ...userWithoutPassword } = data;
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      return { success: true, data: userWithoutPassword };
+      const finalUser = {
+        ...userWithoutPassword,
+        role: userWithoutPassword.role || normalizedUserData.role,
+      };
+      setUser(finalUser);
+      localStorage.setItem('user', JSON.stringify(finalUser));
+      return { success: true, data: finalUser };
     } catch (error) {
       return {
         success: false,
@@ -150,9 +164,16 @@ export const AuthProvider = ({ children }) => {
       // If not found in localStorage, try backend
       try {
         const data = await authAPI.login(credentials);
-        setUser(data);
-        localStorage.setItem('user', JSON.stringify(data));
-        return { success: true, data };
+        const storedUser = getStoredUsers().find(
+          (u) => u.email === credentials.email
+        );
+        const finalUser = {
+          ...data,
+          role: data.role || storedUser?.role || 'renter',
+        };
+        setUser(finalUser);
+        localStorage.setItem('user', JSON.stringify(finalUser));
+        return { success: true, data: finalUser };
       } catch (error) {
         return {
           success: false,
