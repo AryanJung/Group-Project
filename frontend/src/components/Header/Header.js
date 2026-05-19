@@ -12,6 +12,9 @@ const Header = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
+  const canManageHouses =
+    user?.role === 'admin' || user?.role === 'owner';
+
   const handleNavClick = (e, sectionId) => {
     e.preventDefault();
     
@@ -102,7 +105,7 @@ const Header = () => {
             >
               Contact
             </a>
-            {isAuthenticated && (
+            {isAuthenticated && canManageHouses && (
               <Link to="/admin" className="nav-link">Admin</Link>
             )}
           </nav>
