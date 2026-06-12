@@ -1,3 +1,5 @@
 {
-    "gitAutopush.dryRun": false
+    "gitAutopush.dryRun": false,
+    "gitAutopush.autoCommit": false,
+    "gitAutopush.autoPush": false
 }
