@@ -230,3 +230,193 @@
     flex-wrap: wrap;
   }
 }
+
+/* --- Reviews Section Main Layout --- */
+.reviews-section {
+  margin-top: 3rem;
+  padding: 2.5rem;
+  background: #f8fafc;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 3rem;
+}
+
+.reviews-display-pane {
+  flex: 1.5; /* Takes up more visual real-estate for reading */
+}
+
+.reviews-form-pane {
+  flex: 1;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  height: fit-content;
+}
+
+.reviews-section h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  color: #1e293b;
+}
+
+/* --- Individual Review Cards Feed --- */
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.review-card {
+  background: #ffffff;
+  padding: 1.25rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  border: 1px solid #e2e8f0;
+}
+
+.review-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.review-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  font-size: 1.5rem;
+  background: #f1f5f9;
+  padding: 6px;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-name {
+  margin: 0;
+  font-size: 1rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.review-date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.review-stars {
+  font-size: 0.9rem;
+  letter-spacing: -1px;
+}
+
+.review-text {
+  margin: 0;
+  color: #475569;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.no-reviews {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* --- Interactive Elements --- */
+.star-rating {
+  margin-bottom: 1rem;
+}
+
+.star-rating span {
+  margin-right: 4px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.star-rating span:hover {
+  transform: scale(1.25);
+}
+
+.reviews-section textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  resize: vertical;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.reviews-section textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.reviews-section button {
+  width: 100%;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.reviews-section button:hover {
+  background: #1d4ed8;
+}
+
+/* AI Filter Error Display Box */
+.review-error-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #dc2626;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* --- Responsive Layout Breakpoint --- */
+@media (max-width: 768px) {
+  .reviews-section {
+    flex-direction: column-reverse; /* Put form above or below on smaller viewports */
+    gap: 2rem;
+    padding: 1.5rem;
+  }
+}
+.ai-flag-tag {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  background-color: #fef3c7;
+  color: #d97706;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.review-success-banner {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
