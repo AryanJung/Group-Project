@@ -1,0 +1,8 @@
+.home {
+  flex: 1;
+}
+
+.home section {
+  scroll-margin-top: 80px;
+}
+

@@ -1,0 +1,425 @@
+
+
+/* ============================================================
+   PROPERTIES SECTION
+   ============================================================ */
+
+.properties {
+  padding: 8rem 2rem;
+  background: linear-gradient(160deg, #f0f4fb 0%, #e8edf8 50%, #f4f0fb 100%);
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.properties.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.container {
+  max-width: 1260px;
+  margin: 0 auto;
+}
+
+/* ---- Section Header ---- */
+.section-header {
+  text-align: center;
+  margin-bottom: 5rem;
+}
+
+.section-title {
+  font-size: 3rem;
+  color: #051747;
+  margin-bottom: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: 1.15rem;
+  color: #535f80;
+  max-width: 580px;
+  margin: 0 auto;
+  line-height: 1.8;
+  font-weight: 500;
+}
+
+/* ---- Search & Filter Bar ---- */
+.search-filter-bar {
+  display: flex;
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+  align-items: flex-end;
+}
+
+.search-container {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 1rem 1.6rem;
+  border: 2px solid #dde3f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  color: #1a2a4e;
+  box-shadow: 0 2px 8px rgba(5, 23, 71, 0.05);
+}
+
+.search-input::placeholder { color: #a0aec0; }
+
+.search-input:focus {
+  border-color: #6b5dd6;
+  box-shadow: 0 0 0 3px rgba(107, 93, 214, 0.1);
+}
+
+.btn-toggle-filters {
+  padding: 1rem 2.25rem;
+  background: linear-gradient(135deg, #051747 0%, #0b2a5f 100%);
+  color: #fefefe;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(5, 23, 71, 0.18);
+  font-size: 1rem;
+}
+
+.btn-toggle-filters:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(5, 23, 71, 0.3);
+}
+
+/* ---- Filter Panel ---- */
+.filter-panel {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2.5rem 3rem;
+  margin-bottom: 3.5rem;
+  box-shadow: 0 8px 28px rgba(5, 23, 71, 0.08);
+  border: 1px solid #dde3f0;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.filter-row:last-child { margin-bottom: 0; }
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.filter-group label {
+  font-weight: 700;
+  color: #051747;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.filter-select,
+.filter-input {
+  padding: 0.8rem 1.1rem;
+  border: 2px solid #dde3f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s;
+  background: #fafbfe;
+  color: #1a2a4e;
+  font-weight: 500;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  border-color: #6b5dd6;
+  box-shadow: 0 0 0 3px rgba(107, 93, 214, 0.1);
+}
+
+.btn-clear-filters {
+  padding: 0.8rem 1.5rem;
+  background: transparent;
+  color: #051747;
+  border: 2px solid #c5cee0;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  align-self: flex-end;
+}
+
+.btn-clear-filters:hover {
+  background: #051747;
+  color: #fefefe;
+  border-color: #051747;
+  transform: translateY(-2px);
+}
+
+/* ---- Results Info ---- */
+.results-info {
+  margin-bottom: 2rem;
+  color: #535f80;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.results-info strong {
+  color: #051747;
+  font-weight: 700;
+}
+
+/* ---- No Results ---- */
+.no-results {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(5, 23, 71, 0.07);
+  border: 1px solid #dde3f0;
+}
+
+.no-results p {
+  font-size: 1.2rem;
+  color: #535f80;
+  margin-bottom: 1.5rem;
+}
+
+/* ---- Properties Grid ---- */
+/* More columns, less gap to avoid crammed appearance */
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 2rem;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+/* ---- Property Card ---- */
+.property-card {
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 2px 8px rgba(5, 23, 71, 0.06),
+    0 8px 24px rgba(5, 23, 71, 0.06);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(5, 23, 71, 0.06);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.6s ease-out forwards;
+
+  /* Prevent content from feeling crammed */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Staggered animation */
+.properties.in-view .property-card:nth-child(1) { animation-delay: 0s; }
+.properties.in-view .property-card:nth-child(2) { animation-delay: 0.08s; }
+.properties.in-view .property-card:nth-child(3) { animation-delay: 0.16s; }
+.properties.in-view .property-card:nth-child(4) { animation-delay: 0.24s; }
+.properties.in-view .property-card:nth-child(5) { animation-delay: 0.32s; }
+.properties.in-view .property-card:nth-child(6) { animation-delay: 0.4s; }
+.properties.in-view .property-card:nth-child(n+7) { animation-delay: 0.48s; }
+
+.property-card:hover {
+  transform: translateY(-10px);
+  box-shadow:
+    0 12px 32px rgba(5, 23, 71, 0.10),
+    0 20px 48px rgba(5, 23, 71, 0.08);
+}
+
+/* ---- Card Image ---- */
+.property-image {
+  height: 220px;
+  background: linear-gradient(145deg, #051747 0%, #0d2b61 50%, #1a3a70 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.property-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(249, 115, 22, 0.28), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(107, 93, 214, 0.2), transparent 50%);
+  animation: glow 4s ease-in-out infinite;
+}
+
+/* Subtle dot pattern on image bg */
+.property-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.property-emoji {
+  font-size: 5rem;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.2));
+}
+
+/* ---- Card Body ---- */
+.property-content {
+  padding: 2rem 2rem 2.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.property-title {
+  font-size: 1.35rem;
+  color: #051747;
+  margin-bottom: 0.6rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.property-location {
+  color: #6b7a99;
+  margin-bottom: 1.4rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+.property-location::before { content: '📍'; font-size: 0.85em; }
+
+/* Stat pills — more breathing room */
+.property-details {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.property-details span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f0f4fb;
+  color: #2d3d6b;
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  border: 1px solid #dde6f5;
+}
+
+/* Push footer to bottom */
+.property-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1.5rem;
+  border-top: 1.5px solid #f0f4f8;
+  margin-top: auto;
+}
+
+.property-price {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #051747 0%, #1a3a70 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-view {
+  padding: 0.65rem 1.5rem;
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: none;
+  font-size: 0.9rem;
+}
+
+.btn-view:hover {
+  transform: translateY(-2px);
+  box-shadow: none;
+}
+
+/* ============================================================
+   RESPONSIVE — PROPERTIES
+   ============================================================ */
+
+@media (max-width: 1200px) {
+  .properties { padding: 5.5rem 1.5rem; }
+  .properties-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+}
+
+@media (max-width: 1024px) {
+  .properties { padding: 4.5rem 1.5rem; }
+  .section-title { font-size: 2.4rem; }
+  .properties-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.75rem; }
+}
+
+@media (max-width: 768px) {
+  .properties { padding: 3.5rem 1rem; }
+  .section-title { font-size: 2rem; }
+  .section-subtitle { font-size: 1rem; }
+  .search-filter-bar { flex-direction: column; gap: 0.875rem; }
+  .btn-toggle-filters { width: 100%; }
+  .filter-panel { padding: 1.5rem; }
+  .filter-row { grid-template-columns: 1fr; gap: 1rem; }
+  .btn-clear-filters { width: 100%; align-self: auto; }
+  .properties-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; }
+  .property-image { height: 190px; }
+  .property-emoji { font-size: 4rem; }
+}
+
+@media (max-width: 640px) {
+  .properties { padding: 2.5rem 0.75rem; }
+  .section-header { margin-bottom: 2rem; }
+  .section-title { font-size: 1.6rem; }
+  .section-subtitle { font-size: 0.9rem; }
+  .search-input { padding: 0.8rem 1rem; font-size: 0.9rem; }
+  .btn-toggle-filters { font-size: 0.85rem; }
+  .filter-panel { padding: 1.25rem; margin-bottom: 1.5rem; }
+  .filter-group label { font-size: 0.75rem; }
+  .filter-select, .filter-input { padding: 0.7rem 0.9rem; font-size: 0.9rem; }
+  .properties-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+  .property-content { padding: 1.5rem 1.5rem 1.75rem; }
+  .property-title { font-size: 1.1rem; }
+  .property-location { font-size: 0.82rem; }
+  .property-details { gap: 0.5rem; font-size: 0.78rem; }
+  .property-price { font-size: 1.25rem; }
+  .btn-view { padding: 0.55rem 1.1rem; font-size: 0.8rem; }
+}
+
+@media (max-width: 480px) {
+  .properties { padding: 2rem 0.5rem; }
+  .section-title { font-size: 1.4rem; }
+  .properties-grid { gap: 1rem; }
+  .property-image { height: 160px; }
+  .property-emoji { font-size: 3.25rem; }
+  .property-content { padding: 1.25rem; }
+  .property-title { font-size: 1rem; }
+  .btn-view { padding: 0.5rem 0.9rem; font-size: 0.75rem; }
+}
