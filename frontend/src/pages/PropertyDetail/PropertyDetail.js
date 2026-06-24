@@ -1,46 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../../context/PropertiesContext';
-import { adminAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { adminAPI, reviewAPI } from '../../services/api';
 import './PropertyDetail.css';
 
+const PENDING_STATUSES = ['pending_verification', 'pending'];
+
 const PropertyDetail = () => {
-  const { id } = useParams(); // This id acts as our roomId
+  const { id } = useParams();
   const navigate = useNavigate();
   const { properties } = useProperties();
+  const { user, hasReviewAccess } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // Review handling states
+
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [reviews, setReviews] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // MOCK USER ID (Replace this with your real logged-in User Context ID later)
-  const currentUserId = "65f8c3e4b2d1a34c88888888"; 
+  const isValidObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(value);
+
+  const loadApprovedReviews = async (roomId) => {
+    try {
+      const approvedReviews = await reviewAPI.getReviewsByRoom(roomId);
+      setReviews(approvedReviews);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      setReviews([]);
+    }
+  };
 
   useEffect(() => {
     const loadProperty = async () => {
       try {
         setLoading(true);
-        try {
-          const data = await adminAPI.getPropertyById(id);
-          setProperty(data);
-          // If backend provides populated reviews, load them, otherwise use fallback layout
-          setReviews(data.reviews || getMockReviews());
-        } catch (err) {
-          const foundProperty = properties.find(p => p.id === parseInt(id) || p._id === id);
+
+        if (!isValidObjectId(id)) {
+          const foundProperty = properties.find(
+            (propertyItem) =>
+              String(propertyItem.id) === String(id) ||
+              String(propertyItem._id) === String(id)
+          );
+
           if (foundProperty) {
             setProperty(foundProperty);
-            setReviews(foundProperty.reviews || getMockReviews());
-          } else {
-            console.error('Property not found');
+            setReviews([]);
           }
+          return;
         }
-      } catch (err) {
-        console.error('Error loading property:', err);
+
+        const data = await adminAPI.getPropertyById(id);
+        setProperty(data);
+        await loadApprovedReviews(id);
+      } catch (error) {
+        const foundProperty = properties.find(
+          (propertyItem) =>
+            String(propertyItem.id) === String(id) ||
+            String(propertyItem._id) === String(id)
+        );
+
+        if (foundProperty) {
+          setProperty(foundProperty);
+          if (isValidObjectId(foundProperty._id || foundProperty.id)) {
+            await loadApprovedReviews(foundProperty._id || foundProperty.id);
+          } else {
+            setReviews([]);
+          }
+        } else {
+          console.error('Property not found:', error);
+        }
       } finally {
         setLoading(false);
       }
@@ -49,66 +81,72 @@ const PropertyDetail = () => {
     loadProperty();
   }, [id, properties]);
 
-  const getMockReviews = () => [
-    {
-      _id: "1",
-      userId: { name: "Sarah Jenkins" },
-      avatar: "👩‍💼",
-      rating: 5,
-      censoredReview: "Absolutely stunning place. The neighborhood is incredibly quiet.",
-      createdAt: "2026-06-10T12:00:00.000Z"
-    }
-  ];
-  const [successMessage, setSuccessMessage] = useState('');
-  const handleReviewSubmit = async (e) => {
-    e.preventDefault();
-    if (rating === 0) {
-      setErrorMessage("Please select a star rating before submitting.");
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!hasReviewAccess) {
+      setErrorMessage('Please log in with a registered account to submit a review.');
       return;
     }
+
+    if (rating === 0) {
+      setErrorMessage('Please select a star rating before submitting.');
+      return;
+    }
+
     if (!reviewText.trim()) {
-      setErrorMessage("Review text cannot be empty.");
+      setErrorMessage('Review text cannot be empty.');
+      return;
+    }
+
+    if (!isValidObjectId(id)) {
+      setErrorMessage(
+        'This property is stored locally only. Reviews can only be submitted for backend properties.'
+      );
       return;
     }
 
     setErrorMessage('');
+    setSuccessMessage('');
     setSubmitting(true);
 
-    // 🛠️ FIX COERCION: Check if the current route id is a valid 24-char hex string.
-  // If it's a numeric mock id (like 1779167707499), swap it out with a valid test ObjectId
-  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-  const cleanRoomId = isValidObjectId ? id : "65f8c3e4b2d1a34c99999999";
-
     try {
-    // Pass 'cleanRoomId' instead of the raw route 'id'
-    const savedReviewFromDB = await adminAPI.postReview(cleanRoomId, currentUserId, rating, reviewText);
-    // 📋 Check if the AI flagged it for the superadmin queue
-    if (savedReviewFromDB.status === 'pending') {
-      setSuccessMessage("📨 Your review contains sensitive content and has been sent to our Superadmin team for approval before going public.");
-    } else {
-      // Safe review: update the UI feed list immediately
-    const updatedReviewForUI = {
-      _id: savedReviewFromDB._id,
-      userId: { name: "You" },
-      avatar: "👤",
-      rating: savedReviewFromDB.rating,
-      censoredReview: savedReviewFromDB.censoredReview, 
-      createdAt: savedReviewFromDB.createdAt,
-      aiAnalysis: savedReviewFromDB.aiAnalysis
-   };
-      setReviews([updatedReviewForUI, ...reviews]);
-      setSuccessMessage("✅ Review posted successfully!");
-    }
+      const savedReviewFromDB = await reviewAPI.postReview(id, rating, reviewText);
 
-    // Reset fields
-    setReviewText('');
-    setRating(0);
-  } catch (err) {
-    setErrorMessage(err.message);
-  } finally {
-    setSubmitting(false);
-  }
-};
+      if (PENDING_STATUSES.includes(savedReviewFromDB.status)) {
+        setSuccessMessage(
+          'Your review contains sensitive content and has been sent to our Superadmin team for approval before going public.'
+        );
+      } else {
+        const updatedReviewForUI = {
+          _id: savedReviewFromDB._id,
+          userId: {
+            name: savedReviewFromDB.user?.name || user.name || 'You',
+          },
+          avatar: '👤',
+          rating: savedReviewFromDB.rating,
+          censoredReview: savedReviewFromDB.censoredReview,
+          createdAt: savedReviewFromDB.createdAt,
+          aiAnalysis: savedReviewFromDB.aiAnalysis,
+          wordsBlurred: savedReviewFromDB.wordsBlurred,
+        };
+
+        setReviews([updatedReviewForUI, ...reviews]);
+        setSuccessMessage('Review posted successfully!');
+      }
+
+      setReviewText('');
+      setRating(0);
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message ||
+          error.message ||
+          'Failed to submit review. Please try again.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleTalkToBroker = () => {
     navigate(`/chat/${id}`);
@@ -129,7 +167,9 @@ const PropertyDetail = () => {
       <div className="property-detail">
         <div className="container">
           <div className="error">Property not found</div>
-          <button onClick={() => navigate('/')} className="btn-back">Back to Home</button>
+          <button onClick={() => navigate('/')} className="btn-back">
+            Back to Home
+          </button>
         </div>
       </div>
     );
@@ -138,17 +178,19 @@ const PropertyDetail = () => {
   return (
     <div className="property-detail">
       <div className="container">
-        <button onClick={() => navigate('/')} className="btn-back">← Back to Properties</button>
-        
+        <button onClick={() => navigate('/')} className="btn-back">
+          ← Back to Properties
+        </button>
+
         <div className="property-detail-content">
           <div className="property-detail-image">
             <span className="property-emoji-large">{property.image}</span>
           </div>
-          
+
           <div className="property-detail-info">
             <h1 className="property-detail-title">{property.title}</h1>
             <p className="property-detail-location">📍 {property.location}</p>
-            
+
             <div className="property-detail-specs">
               <div className="spec-item">
                 <span className="spec-icon">🛏️</span>
@@ -175,8 +217,8 @@ const PropertyDetail = () => {
               <button className="btn-talk-to-broker" onClick={handleTalkToBroker}>
                 💬 Talk to Broker
               </button>
-              <button 
-                className="btn-location" 
+              <button
+                className="btn-location"
                 onClick={() => {
                   const { coordinates, location } = property;
                   const hasCoords = coordinates && coordinates.lat && coordinates.lng;
@@ -195,40 +237,40 @@ const PropertyDetail = () => {
           </div>
         </div>
 
-        {/* --- REVIEWS DISPLAY & SUBMISSION --- */}
         <div className="reviews-section">
-          
-          {/* List display */}
           <div className="reviews-display-pane">
             <h2>Community Reviews ({reviews.length})</h2>
             {reviews.length === 0 ? (
-              <p className="no-reviews">No reviews yet. Be the first to express your thoughts!</p>
+              <p className="no-reviews">
+                No reviews yet. Be the first to express your thoughts!
+              </p>
             ) : (
               <div className="reviews-list">
-                {reviews.map((rev) => (
-                  <div key={rev._id} className="review-card">
+                {reviews.map((review) => (
+                  <div key={review._id} className="review-card">
                     <div className="review-card-header">
                       <div className="review-user-info">
-                        <span className="user-avatar">{rev.avatar || "👤"}</span>
+                        <span className="user-avatar">{review.avatar || '👤'}</span>
                         <div>
-                          <h4 className="user-name">{rev.userId?.name || "Anonymous User"}</h4>
+                          <h4 className="user-name">
+                            {review.userId?.name || 'Anonymous User'}
+                          </h4>
                           <span className="review-date">
-                            {new Date(rev.createdAt).toLocaleDateString()}
+                            {new Date(review.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
                       <div className="review-stars">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <span key={i} className="star-filled">
-                            {i < rev.rating ? '⭐' : '☆'}
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <span key={index} className="star-filled">
+                            {index < review.rating ? '⭐' : '☆'}
                           </span>
                         ))}
                       </div>
                     </div>
-                    {/* Render the censoredReview text processed by your AI engine */}
-                    <p className="review-text">{rev.censoredReview}</p>
-                    {rev.aiAnalysis?.isToxicContext && (
-                      <span className="ai-flag-tag">⚠️ Flagged by AI Moderation</span>
+                    <p className="review-text">{review.censoredReview}</p>
+                    {review.wordsBlurred && (
+                      <span className="ai-flag-tag">Sensitive words were automatically censored</span>
                     )}
                   </div>
                 ))}
@@ -236,39 +278,47 @@ const PropertyDetail = () => {
             )}
           </div>
 
-          {/* Form display */}
           <div className="reviews-form-pane">
             <h2>Leave a Review</h2>
-            <form onSubmit={handleReviewSubmit}>
-              <div className="star-rating">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    onClick={() => setRating(star)}
-                    style={{ cursor: 'pointer', fontSize: '2rem' }}
-                  >
-                    {star <= rating ? '⭐' : '☆'}
-                  </span>
-                ))}
-              </div>
+            {!hasReviewAccess ? (
+              <p className="no-reviews">
+                Please log in with a registered account to submit a review.
+              </p>
+            ) : (
+              <form onSubmit={handleReviewSubmit}>
+                <div className="star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      onClick={() => setRating(star)}
+                      style={{ cursor: 'pointer', fontSize: '2rem' }}
+                    >
+                      {star <= rating ? '⭐' : '☆'}
+                    </span>
+                  ))}
+                </div>
 
-              {errorMessage && <div className="review-error-banner">{errorMessage}</div>}
-              {successMessage && <div className="review-success-banner">{successMessage}</div>}
+                {errorMessage && (
+                  <div className="review-error-banner">{errorMessage}</div>
+                )}
+                {successMessage && (
+                  <div className="review-success-banner">{successMessage}</div>
+                )}
 
-              <textarea
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Write your review... Note: Any vulgar text will automatically be filtered by our XLM-R classifier system."
-                rows="4"
-                disabled={submitting}
-              />
+                <textarea
+                  value={reviewText}
+                  onChange={(event) => setReviewText(event.target.value)}
+                  placeholder="Write your review... Note: Any vulgar text will automatically be filtered by our XLM-R classifier system."
+                  rows="4"
+                  disabled={submitting}
+                />
 
-              <button type="submit" disabled={submitting}>
-                {submitting ? 'Running AI Moderation Check...' : 'Submit Review'}
-              </button>
-            </form>
+                <button type="submit" disabled={submitting}>
+                  {submitting ? 'Running AI Moderation Check...' : 'Submit Review'}
+                </button>
+              </form>
+            )}
           </div>
-
         </div>
       </div>
     </div>

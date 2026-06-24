@@ -75,3 +75,8 @@ The frontend connects to the backend API at `http://localhost:5000`:
 
 -npm install @mapbox/mapbox-gl-geocoder
 
+
+
+backend ma after changes:
+-npm install bcryptjs
+-npm install jsonwebtoken
