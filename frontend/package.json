@@ -5,7 +5,7 @@
   "dependencies": {
     "@mapbox/mapbox-gl-geocoder": "^5.1.2",
     "axios": "^1.6.2",
-    "mapbox-gl": "^3.23.0",
+    "mapbox-gl": "^3.25.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0"

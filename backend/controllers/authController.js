@@ -11,6 +11,11 @@ const formatUserResponse = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
+  role: user.role,
+  kycVerified: !!user.kycVerified,
+  suspended: !!user.suspended,
+  banned: !!user.banned,
+  suspendedUntil: user.suspendedUntil || null,
   token: generateToken(user._id),
 });
 

@@ -86,12 +86,28 @@ const buildSessionUser = (backendUser, fallbackRole = 'renter') => {
     ...backendUser,
     token: backendUser.token,
     role: backendUser.role || storedUser?.role || fallbackRole,
+    kycVerified: backendUser.kycVerified || false,
+    suspended: backendUser.suspended || false,
+    banned: backendUser.banned || false,
+    suspendedUntil: backendUser.suspendedUntil || null,
   };
 };
 
 const persistSession = (setUser, sessionUser) => {
   setUser(sessionUser);
   localStorage.setItem('user', JSON.stringify(sessionUser));
+  // Notify verified users on login once
+  try {
+    if (sessionUser?.kycVerified) {
+      // only show once per session
+      if (!sessionStorage.getItem('kycVerifiedNotified')) {
+        alert('Your identity has been verified. You now have owner features if applicable.');
+        sessionStorage.setItem('kycVerifiedNotified', 'true');
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
   return sessionUser;
 };
 

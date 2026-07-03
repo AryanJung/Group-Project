@@ -144,6 +144,7 @@ const addReview = async (req, res) => {
     }
 
     const moderationResult = await getModeratedText(comment);
+    console.log("Moderation Result:", moderationResult);
     const reviewStatus = determineReviewStatus(moderationResult);
 
     const review = await Review.create({

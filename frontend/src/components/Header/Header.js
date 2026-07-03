@@ -105,8 +105,14 @@ const Header = () => {
             >
               Contact
             </a>
+            {!(user?.role === 'admin' || user?.kycVerified) && (
+              <Link to="/kyc" className="nav-link">KYC</Link>
+            )}
             {isAuthenticated && canManageHouses && (
               <Link to="/admin" className="nav-link">Admin</Link>
+            )}
+            {isAuthenticated && user?.role === 'admin' && (
+              <Link to="/super-admin" className="nav-link">SuperAdmin</Link>
             )}
           </nav>
           <div className="auth-buttons">

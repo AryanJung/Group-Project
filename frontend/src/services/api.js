@@ -143,4 +143,68 @@ export const reviewAPI = {
   },
 };
 
+// Super Admin API
+export const superAdminAPI = {
+  access: async (key) => {
+    const response = await api.get('/super-admin/access', { params: { key } });
+    return response.data;
+  },
+  listKyc: async (key) => {
+    const response = await api.get('/super-admin/kyc', { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  approveKyc: async (id, key) => {
+    const response = await api.post(`/super-admin/kyc/${id}/approve`, {}, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  rejectKyc: async (id, key, body = {}) => {
+    const response = await api.post(`/super-admin/kyc/${id}/reject`, body, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  listReviews: async (key) => {
+    const response = await api.get('/super-admin/reviews', { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  searchUsers: async (q, key) => {
+    const response = await api.get('/super-admin/users', { params: { q }, headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  suspendUser: async (id, suspended, key) => {
+    const response = await api.patch(`/super-admin/users/${id}/suspend`, { suspended }, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  banUser: async (id, banned, key) => {
+    const response = await api.patch(`/super-admin/users/${id}/ban`, { banned }, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  deleteReview: async (id, key) => {
+    const response = await api.post(`/super-admin/reviews/${id}/delete`, {}, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  editReview: async (id, content, key) => {
+    const response = await api.post(`/super-admin/reviews/${id}/edit`, { content }, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+};
+
+// KYC API
+export const kycAPI = {
+  submit: async (payload) => {
+    const response = await api.post('/kyc/submit', payload);
+    return response.data;
+  },
+  getByUser: async (userId) => {
+    const response = await api.get(`/kyc/user/${userId}`);
+    return response.data;
+  },
+};
+
+// Appeals API
+export const appealsAPI = {
+  create: async (message) => {
+    const response = await api.post('/appeals', { message });
+    return response.data;
+  },
+};
+
 export default api;

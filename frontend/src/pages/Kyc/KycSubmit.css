@@ -1,0 +1,267 @@
+/* ── KycSubmit.css ── */
+
+:root {
+  --navy: #1a1f5e;
+  --orange: #f97316;
+  --orange-hover: #ea6c0a;
+  --bg: #f4f5fb;
+  --card: #ffffff;
+  --border: #e4e6f0;
+  --text: #1a1f5e;
+  --muted: #6b7280;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(26, 31, 94, 0.08);
+}
+
+/* ── Page shell ── */
+.kyc-page {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: var(--text);
+  padding: 3rem 1.5rem;
+}
+
+.kyc-page h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--navy);
+  margin: 0 0 0.4rem;
+}
+
+.kyc-page > p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0 0 2rem;
+}
+
+/* ── Centered card wrapper ── */
+.kyc-page .kyc-card-wrapper {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* ── Inline register box ── */
+.kyc-register {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.kyc-register h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0 0 1rem;
+}
+
+.kyc-register > div {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.kyc-register input {
+  flex: 1;
+  min-width: 130px;
+  padding: 0.6rem 0.9rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+  color: var(--text);
+}
+.kyc-register input:focus { border-color: var(--orange); }
+
+.kyc-register button {
+  padding: 0.6rem 1.3rem;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.kyc-register button:hover:not(:disabled) { background: var(--orange); }
+.kyc-register button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.kyc-register > p {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ── KYC form card ── */
+.kyc-form {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.kyc-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.kyc-form input,
+.kyc-form select,
+.kyc-form textarea {
+  padding: 0.65rem 0.9rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--text);
+  background: #fafafe;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.kyc-form input:focus,
+.kyc-form select:focus,
+.kyc-form textarea:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+  background: #fff;
+}
+
+.kyc-form textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.kyc-form button[type="submit"] {
+  align-self: flex-start;
+  padding: 0.7rem 2rem;
+  background: var(--orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+.kyc-form button[type="submit"]:hover:not(:disabled) {
+  background: var(--orange-hover);
+  transform: translateY(-1px);
+}
+.kyc-form button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Verified banner ── */
+.kyc-verified {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.1rem 1.4rem;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: var(--radius);
+  color: #15803d;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+
+.kyc-verified::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: #22c55e;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* ── Admin notice ── */
+.kyc-admin-notice {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* ── Submissions history ── */
+.kyc-history {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem 1.75rem;
+  margin-top: 2rem;
+}
+
+.kyc-history h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0 0 1rem;
+}
+
+.kyc-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.kyc-history li {
+  padding: 0.8rem 1rem;
+  background: var(--bg);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.kyc-history li .kyc-status {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-left: 0.35rem;
+}
+.kyc-status.approved  { background: #dcfce7; color: #15803d; }
+.kyc-status.pending   { background: #fef9c3; color: #854d0e; }
+.kyc-status.rejected  { background: #fee2e2; color: #b91c1c; }
+
+.kyc-history li .kyc-msg {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.kyc-history .empty {
+  color: var(--muted);
+  font-size: 0.88rem;
+}

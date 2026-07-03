@@ -16,11 +16,17 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const roomRoutes = require('./routes/roomRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
+const kycRoutes = require('./routes/kycRoutes');
+const appealRoutes = require('./routes/appealRoutes');
 
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/rooms', roomRoutes);
 app.use('/rooms', reviewRoutes);
+app.use('/super-admin', superAdminRoutes);
+app.use('/kyc', kycRoutes);
+app.use('/', appealRoutes);
 
 app.listen(PORT , () => {
     console.log(`Server is running on http://localhost:${PORT}`);

@@ -22,6 +22,16 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: "Not authorized, user not found" });
       }
 
+      // Ban handling: immediately block banned accounts
+      if (req.user.banned) {
+        return res.status(403).json({ message: 'Account banned', banned: true });
+      }
+
+      // Suspension handling: if suspendedUntil is set and in the future, block access
+      if (req.user.suspendedUntil && new Date(req.user.suspendedUntil) > new Date()) {
+        return res.status(403).json({ message: 'Account suspended until ' + new Date(req.user.suspendedUntil).toISOString(), suspended: true, suspendedUntil: req.user.suspendedUntil });
+      }
+
       next();
     } catch (error) {
       console.error("Auth middleware error:", error.message);
