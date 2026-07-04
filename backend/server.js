@@ -12,22 +12,37 @@ app.use(express.json());
 
 connectDb();
 
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-const roomRoutes = require('./routes/roomRoutes');
-const reviewRoutes = require('./routes/reviewRoutes');
-const superAdminRoutes = require('./routes/superAdminRoutes');
-const kycRoutes = require('./routes/kycRoutes');
-const appealRoutes = require('./routes/appealRoutes');
+// ── Core routes ───────────────────────────────────────────────────────────────
+const authRoutes        = require('./routes/authRoutes');
+const userRoutes        = require('./routes/userRoutes');
+const roomRoutes        = require('./routes/roomRoutes');
+const reviewRoutes      = require('./routes/reviewRoutes');
 
-app.use('/auth', authRoutes);
-app.use('/users', userRoutes);
-app.use('/rooms', roomRoutes);
-app.use('/rooms', reviewRoutes);
-app.use('/super-admin', superAdminRoutes);
-app.use('/kyc', kycRoutes);
-app.use('/', appealRoutes);
+// ── Feature routes (our work) ─────────────────────────────────────────────────
+const chatRoutes        = require('./routes/chatRoutes');
+const rentalRoutes      = require('./routes/rentalRoutes');
+const applicationRoutes = require('./routes/applicationRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const groupChatRoutes   = require('./routes/groupChatRoutes');
 
-app.listen(PORT , () => {
+// ── Teammate's routes (KYC / SuperAdmin / Appeals) ────────────────────────────
+const superAdminRoutes  = require('./routes/superAdminRoutes');
+const kycRoutes         = require('./routes/kycRoutes');
+const appealRoutes      = require('./routes/appealRoutes');
+
+app.use('/auth',          authRoutes);
+app.use('/users',         userRoutes);
+app.use('/rooms',         roomRoutes);
+app.use('/rooms',         reviewRoutes);
+app.use('/chat',          chatRoutes);
+app.use('/rentals',       rentalRoutes);
+app.use('/applications',  applicationRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/group-chats',   groupChatRoutes);
+app.use('/super-admin',   superAdminRoutes);
+app.use('/kyc',           kycRoutes);
+app.use('/',              appealRoutes);
+
+app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../../context/PropertiesContext';
 import { useAuth } from '../../context/AuthContext';
-import { adminAPI, reviewAPI } from '../../services/api';
+import { adminAPI, reviewAPI, rentalAPI, applicationAPI } from '../../services/api';
 import './PropertyDetail.css';
 
 const PENDING_STATUSES = ['pending_verification', 'pending'];
@@ -14,6 +14,10 @@ const PropertyDetail = () => {
   const { user, hasReviewAccess } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Rental access state: null = unknown, { isOwner, isRenter }
+  const [rentalStatus, setRentalStatus] = useState(null);
+  const [renting, setRenting] = useState(false);
 
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
@@ -80,6 +84,60 @@ const PropertyDetail = () => {
 
     loadProperty();
   }, [id, properties]);
+
+  // Load rental status whenever the property id or logged-in user changes
+  useEffect(() => {
+    const isValidObjectId = (v) => /^[0-9a-fA-F]{24}$/.test(v);
+    if (!user?.token || !isValidObjectId(id)) return;
+
+    rentalAPI
+      .getStatus(id)
+      .then((status) => setRentalStatus(status))
+      .catch(() => setRentalStatus(null));
+  }, [id, user]);
+
+  const handleApply = async () => {
+    if (!user?.token) {
+      setErrorMessage('Please log in to apply for this property.');
+      return;
+    }
+    const message = window.prompt('Add a note to the owner (optional):') ?? '';
+    setRenting(true);
+    setErrorMessage('');
+    try {
+      const application = await applicationAPI.apply(id, message);
+      setRentalStatus((prev) => ({
+        ...prev,
+        application: { _id: application._id, status: 'pending' },
+      }));
+      setSuccessMessage('Application submitted! The owner will review it shortly.');
+    } catch (err) {
+      setErrorMessage(
+        err.response?.data?.message || 'Failed to submit application. Please try again.'
+      );
+    } finally {
+      setRenting(false);
+    }
+  };
+
+  const handleWithdrawApplication = async () => {
+    const appId = rentalStatus?.application?._id;
+    if (!appId) return;
+    if (!window.confirm('Withdraw your application for this property?')) return;
+    setRenting(true);
+    setErrorMessage('');
+    try {
+      await applicationAPI.withdraw(appId);
+      setRentalStatus((prev) => ({ ...prev, application: null }));
+      setSuccessMessage('Application withdrawn.');
+    } catch (err) {
+      setErrorMessage(
+        err.response?.data?.message || 'Failed to withdraw application.'
+      );
+    } finally {
+      setRenting(false);
+    }
+  };
 
   const handleReviewSubmit = async (event) => {
     event.preventDefault();
@@ -148,9 +206,26 @@ const PropertyDetail = () => {
     }
   };
 
-  const handleTalkToBroker = () => {
+  const handleOpenChat = () => {
     navigate(`/chat/${id}`);
   };
+
+  const hasChatAccess = rentalStatus?.isOwner || rentalStatus?.isRenter;
+  const applicationStatus = rentalStatus?.application?.status ?? null;
+  const applicationId = rentalStatus?.application?._id ?? null;
+  const isAtCapacity =
+    !rentalStatus?.isOwner &&
+    !rentalStatus?.isRenter &&
+    (rentalStatus?.isRented || property?.isRented) &&
+    !applicationStatus;
+  const canApply =
+    user?.token &&
+    isValidObjectId(id) &&
+    rentalStatus !== null &&
+    !rentalStatus.isOwner &&
+    !rentalStatus.isRenter &&
+    !applicationStatus &&
+    !isAtCapacity;
 
   if (loading) {
     return (
@@ -214,9 +289,63 @@ const PropertyDetail = () => {
             </div>
 
             <div className="property-detail-actions">
-              <button className="btn-talk-to-broker" onClick={handleTalkToBroker}>
-                💬 Talk to Broker
-              </button>
+              {/* Owner or accepted renter */}
+              {hasChatAccess ? (
+                <>
+                  <button className="btn-talk-to-broker" onClick={handleOpenChat}>
+                    💬 Open Group Chat
+                  </button>
+                  {rentalStatus?.isRenter && (
+                    <button
+                      onClick={() => rentalAPI.cancelRent(id).then(() => setRentalStatus((p) => ({ ...p, isRenter: false, isRented: false })))}
+                      disabled={renting}
+                      style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', marginLeft: '0.5rem' }}
+                    >
+                      Cancel Rental
+                    </button>
+                  )}
+                </>
+              ) : applicationStatus === 'pending' ? (
+                /* Application submitted — waiting for owner */
+                <>
+                  <button className="btn-talk-to-broker" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f59e0b' }}>
+                    ⏳ Application Pending
+                  </button>
+                  <button
+                    onClick={handleWithdrawApplication}
+                    disabled={renting}
+                    style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', marginLeft: '0.5rem' }}
+                  >
+                    {renting ? 'Withdrawing…' : 'Withdraw'}
+                  </button>
+                </>
+              ) : applicationStatus === 'rejected' ? (
+                /* Rejected — can try again */
+                <>
+                  <button className="btn-talk-to-broker" disabled style={{ opacity: 0.5, cursor: 'not-allowed', background: '#ef4444' }}>
+                    ❌ Application Rejected
+                  </button>
+                  <button
+                    onClick={handleApply}
+                    disabled={renting}
+                    style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', marginLeft: '0.5rem' }}
+                  >
+                    {renting ? 'Submitting…' : 'Apply Again'}
+                  </button>
+                </>
+              ) : isAtCapacity ? (
+                <button className="btn-talk-to-broker" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                  🔒 Listing Full ({property?.maxRenters}/{property?.maxRenters} renters)
+                </button>
+              ) : canApply ? (
+                <button
+                  className="btn-talk-to-broker"
+                  onClick={handleApply}
+                  disabled={renting}
+                >
+                  {renting ? 'Submitting…' : '🏠 Apply to Rent'}
+                </button>
+              ) : null}
               <button
                 className="btn-location"
                 onClick={() => {

@@ -244,4 +244,76 @@
     font-size: 0.9rem;
   }
 }
+/* --- Group Chat additions --- */
 
+/* Access denied / loading overlay */
+.chat-access-denied {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 2rem;
+  color: #051747;
+}
+
+.chat-access-denied p {
+  font-size: 1rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.chat-access-denied button {
+  padding: 0.6rem 1.4rem;
+  background: #7C3AED;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chat-access-denied button:hover {
+  background: #6D28D9;
+}
+
+/* Role badge in header */
+.chat-role-badge {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+/* Sender name above other-person's bubble */
+.message-sender-name {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #7C3AED;
+  margin-bottom: 0.25rem;
+}
+
+/* Empty chat placeholder */
+.chat-empty {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin: auto;
+}
+
+/* Send error below messages area */
+.chat-send-error {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  color: #dc2626;
+  background: #fef2f2;
+  border-top: 1px solid #fecaca;
+  margin: 0;
+}
+
+.btn-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

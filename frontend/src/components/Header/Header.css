@@ -142,7 +142,7 @@
 .user-menu {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .user-name {
@@ -150,6 +150,233 @@
   font-weight: 600;
   font-size: 0.9rem;
 }
+
+/* ── Shared header icon buttons (chat + bell) ── */
+.btn-icon-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.15s, box-shadow 0.2s;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.btn-chat-icon {
+  background: #f3f0ff;
+  color: #7C3AED;
+  border-color: #ddd6fe;
+}
+
+.btn-chat-icon:hover {
+  background: #7C3AED;
+  color: #fff;
+  border-color: #7C3AED;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+.btn-chat-icon:active {
+  transform: scale(0.96);
+}
+
+.btn-notif-icon {
+  background: #fff7ed;
+  color: #ea580c;
+  border-color: #fed7aa;
+}
+
+.btn-notif-icon:hover {
+  background: #ea580c;
+  color: #fff;
+  border-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
+}
+
+.btn-notif-icon:active {
+  transform: scale(0.96);
+}
+
+/* Badge on bell */
+.notif-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Wrapper for bell + dropdown */
+.notif-wrapper {
+  position: relative;
+}
+
+/* Dropdown panel */
+.notif-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  max-height: 480px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: notifSlideIn 0.18s ease;
+}
+
+@keyframes notifSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.notif-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.notif-dropdown-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #111827;
+}
+
+.notif-mark-all {
+  font-size: 0.75rem;
+  color: #6366f1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.notif-mark-all:hover {
+  text-decoration: underline;
+}
+
+/* Scrollable list */
+.notif-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.notif-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+/* Individual notification item */
+.notif-item {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+  display: block;
+}
+
+.notif-item:hover {
+  background: #f9fafb;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item--unread {
+  background: #fef9f5;
+}
+
+.notif-item--unread:hover {
+  background: #fef3e8;
+}
+
+.notif-item-type {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.notif-item-message {
+  font-size: 0.85rem;
+  color: #111827;
+  line-height: 1.4;
+  margin-bottom: 0.35rem;
+}
+
+.notif-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notif-room {
+  font-size: 0.72rem;
+  background: #f0f9ff;
+  color: #0369a1;
+  padding: 0.1rem 0.45rem;
+  border-radius: 99px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.notif-time {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* Unread dot (top-right corner) */
+.notif-dot {
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  background: #f97316;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
 
 @media (max-width: 1200px) {
   .header-container {

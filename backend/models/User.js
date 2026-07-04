@@ -7,8 +7,12 @@ const userSchema = new mongoose.Schema(
         email: { type: String, required: true, unique: true },
         phoneNumber: { type: String, unique: true },
         password: { type: String, required: true },
-        // Additional fields expected by controllers
-        role: { type: String, enum: ['user', 'owner', 'admin'], default: 'user' },
+        role: {
+            type: String,
+            enum: ["renter", "owner", "admin", "superadmin"],
+            default: "renter",
+        },
+        // KYC / moderation fields (added by teammate)
         suspended: { type: Boolean, default: false },
         banned: { type: Boolean, default: false },
         kycVerified: { type: Boolean, default: false },

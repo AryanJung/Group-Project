@@ -7,10 +7,12 @@ import { useAuth } from './context/AuthContext';
 import { appealsAPI } from './services/api';
 import Home from './pages/Home/Home';
 import Admin from './pages/Admin/Admin';
-import KycSubmit from './pages/Kyc/KycSubmit';
-import SuperAdmin from './pages/SuperAdmin/SuperAdmin';
 import PropertyDetail from './pages/PropertyDetail/PropertyDetail';
 import Chat from './pages/Chat/Chat';
+import MyChats from './pages/MyChats/MyChats';
+import KycSubmit from './pages/Kyc/KycSubmit';
+import SuperAdmin from './pages/SuperAdmin/SuperAdmin';
+import ChatbotWidget from './components/ChatbotWidget/ChatbotWidget';
 import './App.css';
 
 function App() {
@@ -42,10 +44,10 @@ function AppContent() {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
         <div style={{ background: '#222', padding: 24, borderRadius: 8, maxWidth: 700 }}>
-         <p>Account Banned</p> 
+          <p>Account Banned</p>
           <p>Your account has been banned. You cannot perform actions.</p>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {/*<button onClick={sendAppeal} style={{ padding: '8px 12px' }}>Appeal</button> */}
+            <button onClick={sendAppeal} style={{ padding: '8px 12px' }}>Appeal</button>
             <button onClick={() => { localStorage.removeItem('user'); window.location.href = '/'; }} style={{ padding: '8px 12px' }}>Logout</button>
           </div>
         </div>
@@ -59,14 +61,15 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/kyc" element={<KycSubmit />} />
-        <Route path="/super-admin" element={<SuperAdmin />} />
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/chat/:id" element={<Chat />} />
+        <Route path="/my-chats" element={<MyChats />} />
+        <Route path="/kyc" element={<KycSubmit />} />
+        <Route path="/super-admin" element={<SuperAdmin />} />
       </Routes>
+      <ChatbotWidget />
     </div>
   );
 }
 
 export default App;
-

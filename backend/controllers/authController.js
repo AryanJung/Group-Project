@@ -7,11 +7,12 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const generateToken = (userId) =>
   jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "30d" });
 
+// Include KYC/moderation fields so frontend can read them
 const formatUserResponse = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
-  role: user.role,
+  role: user.role || "renter",
   kycVerified: !!user.kycVerified,
   suspended: !!user.suspended,
   banned: !!user.banned,
@@ -20,14 +21,10 @@ const formatUserResponse = (user) => ({
 });
 
 const verifyPassword = async (candidatePassword, storedPassword) => {
-  if (!storedPassword) {
-    return false;
-  }
-
+  if (!storedPassword) return false;
   if (storedPassword.startsWith("$2")) {
     return bcrypt.compare(candidatePassword, storedPassword);
   }
-
   return candidatePassword === storedPassword;
 };
 
@@ -61,12 +58,16 @@ const generatePhoneNumber = async () => {
 
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
+
+    // Validate role — only allow renter or owner on self-registration
+    const allowedRoles = ["renter", "owner"];
+    const assignedRole = allowedRoles.includes(role) ? role : "renter";
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const username = await generateUsername(email, name);
@@ -78,6 +79,7 @@ const registerUser = async (req, res) => {
       phoneNumber,
       email,
       password: hashedPassword,
+      role: assignedRole,
     });
 
     res.status(201).json(formatUserResponse(user));
