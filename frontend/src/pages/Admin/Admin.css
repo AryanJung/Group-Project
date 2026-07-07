@@ -218,6 +218,7 @@
 }
 
 .form-group input,
+.form-group textarea,
 .form-group .profile-static-value {
   padding: 0.75rem 1rem;
   border: 1.5px solid #CBD5E1;
@@ -229,7 +230,19 @@
   width: 100%;
 }
 
-.form-group input:focus {
+.form-group textarea {
+  min-height: 130px;
+  resize: vertical;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.form-group--wide {
+  grid-column: 1 / -1;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: #7C3AED;
   box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
@@ -374,9 +387,15 @@
   position: relative;
 }
 
-.property-emoji {
-  font-size: 3.5rem;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+.property-card-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #E0F2FE;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .admin-property-content {

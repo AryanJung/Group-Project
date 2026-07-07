@@ -11,6 +11,7 @@ const generateToken = (userId) =>
 const formatUserResponse = (user) => ({
   _id: user._id,
   name: user.name,
+  username: user.username,
   email: user.email,
   role: user.role || "renter",
   kycVerified: !!user.kycVerified,
@@ -90,16 +91,19 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
+    const identifier = (email || username || "").trim();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    });
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Username doesn't exist" });
     }
 
     const passwordMatches = await verifyPassword(password, user.password);
     if (!passwordMatches) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Wrong password" });
     }
 
     res.json(formatUserResponse(user));

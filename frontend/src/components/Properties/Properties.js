@@ -91,16 +91,6 @@ const Properties = () => {
     });
   }, [properties, searchQuery, locationFilter, minPrice, maxPrice, bedroomsFilter, bathroomsFilter]);
 
-  // Get price range for slider
-  const priceRange = useMemo(() => {
-    if (properties.length === 0) return { min: 0, max: 100000 };
-    const prices = properties.map(p => extractPrice(p.price)).filter(p => p > 0);
-    return {
-      min: Math.min(...prices),
-      max: Math.max(...prices),
-    };
-  }, [properties]);
-
   const handleViewDetails = (propertyId) => {
     navigate(`/property/${propertyId}`);
   };
@@ -132,7 +122,7 @@ const Properties = () => {
             <input
               type="text"
               className="search-input"
-              placeholder="🔍 Search by title, location, or price..."
+              placeholder="Search by title, location, or price..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -249,15 +239,19 @@ const Properties = () => {
             {filteredProperties.map((property) => (
               <div key={property.id || property._id} className="property-card">
                 <div className="property-image">
-                  <span className="property-emoji">{property.image}</span>
+                  <span className="property-card-icon" aria-hidden="true">
+                    <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                      <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                    </svg>
+                  </span>
                 </div>
                 <div className="property-content">
                   <h3 className="property-title">{property.title}</h3>
-                  <p className="property-location">📍 {property.location}</p>
+                  <p className="property-location">{property.location}</p>
                   <div className="property-details">
-                    <span>🛏️ {property.bedrooms} Bed</span>
-                    <span>🚿 {property.bathrooms} Bath</span>
-                    <span>📐 {property.area}</span>
+                    <span>{property.bedrooms} Bed</span>
+                    <span>{property.bathrooms} Bath</span>
+                    <span>{property.area}</span>
                   </div>
                   <div className="property-footer">
                     <span className="property-price">{property.price}</span>

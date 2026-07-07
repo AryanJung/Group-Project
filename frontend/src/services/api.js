@@ -23,7 +23,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || '';
+    const isAuthAttempt =
+      requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+
+    if (error.response?.status === 401 && !isAuthAttempt) {
       localStorage.removeItem('user');
       window.location.reload();
     }
@@ -55,7 +59,7 @@ const roomToProperty = (room) => ({
   bedrooms: room.bedrooms ?? 1,
   bathrooms: room.bathrooms ?? 1,
   area: room.area || 'N/A',
-  image: room.image || room.images?.[0] || '🏠',
+  image: room.image || room.images?.[0] || '',
   images: room.images || [],
   videos: room.videos || [],
   features: room.features || [],
@@ -77,7 +81,7 @@ const propertyToRoom = (property) => ({
   bedrooms: property.bedrooms,
   bathrooms: property.bathrooms,
   area: property.area,
-  image: property.image,
+  image: property.image || '',
   images: property.image ? [property.image] : [],
   maxRenters: property.maxRenters ?? 1,
   features: [
@@ -93,7 +97,7 @@ const mapReviewForUI = (review) => ({
     name: review.user?.name || 'Anonymous User',
     email: review.user?.email,
   },
-  avatar: '👤',
+  avatar: '',
   rating: review.rating,
   censoredReview: review.censoredReview,
   createdAt: review.createdAt,

@@ -307,7 +307,9 @@ const PropertyDetail = () => {
   const images = getPropertyImages(property);
   const videos = getPropertyVideos(property);
   const features = buildPropertyFeatures(property);
-  const descriptionParagraphs = formatDescription(property.description);
+  const descriptionParagraphs = formatDescription(
+    property.description || 'No property description has been added yet.'
+  );
   const hasGallery = images.length > 0;
 
   return (
@@ -449,7 +451,7 @@ const PropertyDetail = () => {
                 </>
               ) : isAtCapacity ? (
                 <button className="btn-primary" disabled type="button">
-                  Listing Full ({property?.maxRenters}/{property?.maxRenters} renters)
+                  Listing Full
                 </button>
               ) : canApply ? (
                 <button
@@ -491,16 +493,14 @@ const PropertyDetail = () => {
         </section>
 
         {/* Description */}
-        {descriptionParagraphs.length > 0 && (
-          <section className="property-section property-description-section">
-            <h2 className="section-heading">About this property</h2>
-            <div className="property-description">
-              {descriptionParagraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
-          </section>
-        )}
+        <section className="property-section property-description-section">
+          <h2 className="section-heading">Property Description</h2>
+          <div className="property-description">
+            {descriptionParagraphs.map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+        </section>
 
         {/* Videos */}
         {videos.length > 0 && (

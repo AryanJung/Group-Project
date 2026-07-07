@@ -272,11 +272,17 @@
   background-size: 20px 20px;
 }
 
-.property-emoji {
-  font-size: 5rem;
+.property-card-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #e0f2fe;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
   position: relative;
   z-index: 2;
-  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.2));
 }
 
 /* ---- Card Body ---- */
@@ -305,7 +311,7 @@
   font-weight: 500;
 }
 
-.property-location::before { content: '📍'; font-size: 0.85em; }
+.property-location::before { content: ''; }
 
 /* Stat pills — more breathing room */
 .property-details {
@@ -391,7 +397,7 @@
   .btn-clear-filters { width: 100%; align-self: auto; }
   .properties-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; }
   .property-image { height: 190px; }
-  .property-emoji { font-size: 4rem; }
+  .property-card-icon { width: 68px; height: 68px; }
 }
 
 @media (max-width: 640px) {
@@ -418,7 +424,7 @@
   .section-title { font-size: 1.4rem; }
   .properties-grid { gap: 1rem; }
   .property-image { height: 160px; }
-  .property-emoji { font-size: 3.25rem; }
+  .property-card-icon { width: 60px; height: 60px; }
   .property-content { padding: 1.25rem; }
   .property-title { font-size: 1rem; }
   .btn-view { padding: 0.5rem 0.9rem; font-size: 0.75rem; }

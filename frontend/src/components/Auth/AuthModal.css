@@ -22,14 +22,37 @@
 
 .modal-content {
   background: #FFFFFF;
-  padding: 2.5rem 2rem;
-  border-radius: 16px; /* Slightly softer corners */
+  padding: 0;
+  border-radius: 8px;
   width: 90%;
-  max-width: 420px;
+  max-width: 860px;
   position: relative;
   box-shadow: 0 20px 40px rgba(5, 23, 71, 0.15), 
               0 1px 3px rgba(0, 0, 0, 0.05);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.auth-split {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(320px, 1fr);
+  min-height: 560px;
+}
+
+.auth-visual {
+  background:
+    linear-gradient(rgba(5, 23, 71, 0.16), rgba(5, 23, 71, 0.28)),
+    url("https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1000&q=80");
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-form-pane {
+  position: relative;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .modal-close {
@@ -121,6 +144,14 @@
   font-weight: 500;
 }
 
+.field-error {
+  margin: 0.4rem 0 0;
+  color: #DC2626;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
 .btn-submit {
   width: 100%;
   padding: 0.875rem;
@@ -190,5 +221,24 @@
   to { 
     opacity: 1; 
     transform: translateY(0); 
+  }
+}
+
+@media (max-width: 720px) {
+  .modal-content {
+    width: min(94%, 430px);
+  }
+
+  .auth-split {
+    display: block;
+    min-height: 0;
+  }
+
+  .auth-visual {
+    display: none;
+  }
+
+  .auth-form-pane {
+    padding: 2.25rem 1.5rem;
   }
 }

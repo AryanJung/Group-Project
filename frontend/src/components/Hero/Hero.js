@@ -2,38 +2,30 @@ import React, { useEffect } from 'react';
 import './Hero.css';
 
 const Hero = () => {
-useEffect(() => {
-  const logo = document.querySelector(
-    '.hero-image .hero-placeholder span'
-  );
+  useEffect(() => {
+    const logo = document.querySelector('.hero-image .hero-placeholder span');
+    if (!logo) return;
 
-  if (!logo) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          logo.classList.add('in-view');
+        } else {
+          logo.classList.remove('in-view');
+        }
+      },
+      { threshold: 0.5 }
+    );
 
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.isIntersecting) {
-        logo.classList.add('in-view');
-      } else {
-        logo.classList.remove('in-view');
-      }
-    },
-    { threshold: 0.5 }
-  );
+    observer.observe(logo);
 
-  observer.observe(logo);
+    const rect = logo.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      logo.classList.add('in-view');
+    }
 
-  // 🔥 force initial check
-  const rect = logo.getBoundingClientRect();
-  const inView =
-    rect.top < window.innerHeight && rect.bottom > 0;
-
-  if (inView) {
-    logo.classList.add('in-view');
-  }
-
-  return () => observer.disconnect();
-}, []);
-
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="hero">
@@ -51,7 +43,11 @@ useEffect(() => {
 
       <div className="hero-image">
         <div className="hero-placeholder">
-          <span>🏠</span>
+          <span aria-hidden="true">
+            <svg width="92" height="92" viewBox="0 0 24 24" fill="none">
+              <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
+          </span>
         </div>
       </div>
     </div>

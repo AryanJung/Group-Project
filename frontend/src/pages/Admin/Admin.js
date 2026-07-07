@@ -32,6 +32,7 @@ const Admin = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
+  const [formError, setFormError] = useState('');
   const formRef = useRef(null);
 
   const emptyForm = {
@@ -42,7 +43,8 @@ const Admin = () => {
     bedrooms: '',
     bathrooms: '',
     area: '',
-    image: '🏠',
+    description: '',
+    image: '',
     maxRenters: 1,
   };
   const [formData, setFormData] = useState(emptyForm);
@@ -109,6 +111,7 @@ const Admin = () => {
     setFormData(emptyForm);
     setEditingProperty(null);
     setShowAddForm(false);
+    setFormError('');
   };
 
   const handleEdit = (property) => {
@@ -121,9 +124,11 @@ const Admin = () => {
       bedrooms: property.bedrooms || '',
       bathrooms: property.bathrooms || '',
       area: property.area || '',
+      description: property.description || '',
       maxRenters: property.maxRenters ?? 1,
-      image: property.image || '🏠',
+      image: property.image || '',
     });
+    setFormError('');
     setShowAddForm(true);
     setActiveTab('houses');
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -135,7 +140,7 @@ const Admin = () => {
       await adminAPI.deleteProperty(id);
       setMyRooms((prev) => prev.filter((r) => String(r._id || r.id) !== String(id)));
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete property');
+      setRoomsError(err.response?.data?.message || 'Failed to delete property');
     }
   };
 
@@ -143,11 +148,12 @@ const Admin = () => {
     e.preventDefault();
 
     if (!formData.coordinates) {
-      alert('Please select a precise location on the map first!');
+      setFormError('Please select a precise location on the map first.');
       return;
     }
 
     setSubmitting(true);
+    setFormError('');
     const payload = {
       ...formData,
       // Send the raw numeric price — api.js will strip formatting if needed
@@ -168,7 +174,7 @@ const Admin = () => {
       }
       resetForm();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to save property');
+      setFormError(err.response?.data?.message || 'Failed to save property');
     } finally {
       setSubmitting(false);
     }
@@ -275,7 +281,7 @@ const Admin = () => {
             <div className="admin-container">
               <div className="admin-header">
                 <h1>Property Management</h1>
-                {roomsError && <div className="error-banner">⚠️ {roomsError}</div>}
+                {roomsError && <div className="error-banner">{roomsError}</div>}
               </div>
 
               <div className="admin-actions">
@@ -293,7 +299,7 @@ const Admin = () => {
                     setShowAddForm(true);
                   }}
                 >
-                  {showAddForm ? 'Cancel' : '+ Add New Property'}
+                  {showAddForm ? 'Cancel' : 'Add New Property'}
                 </button>
               </div>
 
@@ -301,6 +307,7 @@ const Admin = () => {
               {showAddForm && (
                 <div className="add-property-form" ref={formRef}>
                   <h2>{editingProperty ? 'Edit Property' : 'Add New Property'}</h2>
+                  {formError && <div className="error-banner">{formError}</div>}
                   <form onSubmit={handleSubmit}>
                     <div className="form-row">
                       <div className="form-group">
@@ -361,15 +368,24 @@ const Admin = () => {
                           title="How many renters can rent this listing (e.g. 2 for a 2-room flat)"
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Emoji Icon</label>
-                        <input type="text" name="image" value={formData.image} onChange={handleInputChange} maxLength="2" />
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group form-group--wide">
+                        <label>Property Description</label>
+                        <textarea
+                          name="description"
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          rows="5"
+                          placeholder="Describe the rooms, neighborhood, access, and house rules."
+                        />
                       </div>
                     </div>
 
                     <button type="submit" className="btn-submit-form" disabled={submitting}>
                       {submitting
-                        ? editingProperty ? 'Updating…' : 'Adding…'
+                        ? editingProperty ? 'Updating...' : 'Adding...'
                         : editingProperty ? 'Update Property' : 'Add Property'}
                     </button>
                   </form>
@@ -388,20 +404,24 @@ const Admin = () => {
                     {myRooms.map((property) => (
                       <div key={property._id || property.id} className="admin-property-card">
                         <div className="admin-property-image">
-                          <span className="property-emoji">{property.image}</span>
+                          <span className="property-card-icon" aria-hidden="true">
+                            <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                              <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                            </svg>
+                          </span>
                         </div>
                         <div className="admin-property-content">
                           <h3>{property.title}</h3>
-                          <p className="property-location">📍 {property.location}</p>
+                          <p className="property-location">{property.location}</p>
                           <div className="property-details">
-                            <span>🛏️ {property.bedrooms} Bed</span>
-                            <span>🚿 {property.bathrooms} Bath</span>
-                            <span>📐 {property.area}</span>
+                            <span>{property.bedrooms} Bed</span>
+                            <span>{property.bathrooms} Bath</span>
+                            <span>{property.area}</span>
                           </div>
                           <div className="property-price">{property.price}</div>
                           {property.isRented && (
                             <span style={{ fontSize: '0.75rem', background: '#fef3c7', color: '#92400e', padding: '0.2rem 0.6rem', borderRadius: '20px', fontWeight: 600 }}>
-                              🔑 Currently Rented
+                              Currently Rented
                             </span>
                           )}
                           <div className="property-actions">
@@ -412,7 +432,7 @@ const Admin = () => {
                                 setActiveTab('applications');
                               }}
                             >
-                              📋 Applications
+                              Applications
                             </button>
                             <button className="btn-edit" onClick={() => handleEdit(property)}>Edit</button>
                             <button className="btn-delete" onClick={() => handleDelete(property._id || property.id)}>Delete</button>
@@ -430,7 +450,7 @@ const Admin = () => {
           {activeTab === 'applications' && isOwner && (
             <div className="admin-container">
               <div className="admin-header">
-                <h1>📋 Rental Applications</h1>
+                <h1>Rental Applications</h1>
                 <p>
                   {applicationsRoomId
                     ? 'Applications for selected listing'
@@ -440,7 +460,7 @@ const Admin = () => {
                       onClick={() => setApplicationsRoomId(null)}
                       style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#6366f1', background: 'none', border: '1px solid #6366f1', borderRadius: '99px', padding: '0.1rem 0.65rem', cursor: 'pointer', fontWeight: 600 }}
                     >
-                      ✕ Clear filter
+                      Clear filter
                     </button>
                   )}
                 </p>
@@ -462,7 +482,7 @@ const Admin = () => {
                           {/* Listing name — shown when viewing all */}
                           {app.room?.title && (
                             <div style={{ fontSize: '0.72rem', background: '#f0f9ff', color: '#0369a1', display: 'inline-block', padding: '0.1rem 0.55rem', borderRadius: '99px', fontWeight: 600, marginBottom: '0.4rem' }}>
-                              🏠 {app.room.title}
+                              {app.room.title}
                             </div>
                           )}
                           <div style={{ fontWeight: 700, color: '#111827', marginBottom: '0.25rem' }}>
@@ -487,10 +507,10 @@ const Admin = () => {
                                     setApplications((prev) =>
                                       prev.map((a) => a._id === app._id ? { ...a, status: 'accepted' } : a)
                                     );
-                                  } catch (e) { alert(e.response?.data?.message || 'Failed to accept'); }
+                                  } catch (e) { setGroupChatMsg(e.response?.data?.message || 'Failed to accept'); }
                                 }}
                               >
-                                ✓ Accept
+                                Accept
                               </button>
                               <button
                                 style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
@@ -500,10 +520,10 @@ const Admin = () => {
                                     setApplications((prev) =>
                                       prev.map((a) => a._id === app._id ? { ...a, status: 'rejected' } : a)
                                     );
-                                  } catch (e) { alert(e.response?.data?.message || 'Failed to reject'); }
+                                  } catch (e) { setGroupChatMsg(e.response?.data?.message || 'Failed to reject'); }
                                 }}
                               >
-                                ✕ Reject
+                                Reject
                               </button>
                             </>
                           ) : (
@@ -527,10 +547,10 @@ const Admin = () => {
               {applicationsRoomId && (
                 <div style={{ borderTop: '1px solid #e5e7eb', padding: '1.25rem', background: '#f9fafb' }}>
                   <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', marginBottom: '0.75rem' }}>
-                    💬 Create Group Chat for this listing
+                    Create Group Chat for this listing
                   </p>
                   {groupChatMsg && (
-                    <p style={{ fontSize: '0.82rem', color: groupChatMsg.startsWith('✅') ? '#15803d' : '#b91c1c', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.82rem', color: groupChatMsg.toLowerCase().includes('failed') ? '#b91c1c' : '#15803d', marginBottom: '0.5rem' }}>
                       {groupChatMsg}
                     </p>
                   )}
@@ -559,17 +579,17 @@ const Admin = () => {
                             applicationsRoomId,
                             acceptedRenterIds
                           );
-                          setGroupChatMsg(`✅ Chat created! Redirecting…`);
+                          setGroupChatMsg('Chat created! Redirecting...');
                           const roomId = newChat.room?._id || newChat.room;
                           setTimeout(() => navigate(`/chat/${roomId}`), 800);
                         } catch (e) {
                           const errMsg = e.response?.data?.message || 'Failed to create chat.';
                           // If already exists, try to open it
                           if (errMsg.toLowerCase().includes('already') || e.response?.status === 409) {
-                            setGroupChatMsg('ℹ️ Chat already exists — opening it…');
+                            setGroupChatMsg('Chat already exists. Opening it...');
                             setTimeout(() => navigate(`/chat/${applicationsRoomId}`), 800);
                           } else {
-                            setGroupChatMsg(`❌ ${errMsg}`);
+                            setGroupChatMsg(errMsg);
                           }
                         } finally {
                           setGroupChatCreating(false);
@@ -583,7 +603,7 @@ const Admin = () => {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {groupChatCreating ? 'Creating…' : '+ Create & Add All Renters'}
+                      {groupChatCreating ? 'Creating...' : 'Create and Add All Renters'}
                     </button>
                     <button
                       onClick={() => navigate(`/chat/${applicationsRoomId}`)}
@@ -620,14 +640,18 @@ const Admin = () => {
                       return (
                         <div key={rental._id} className="admin-property-card">
                           <div className="admin-property-image">
-                            <span className="property-emoji">{room.image || '🏠'}</span>
+                            <span className="property-card-icon" aria-hidden="true">
+                              <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                                <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                              </svg>
+                            </span>
                           </div>
                           <div className="admin-property-content">
                             <h3>{room.title}</h3>
-                            <p className="property-location">📍 {room.location}</p>
+                            <p className="property-location">{room.location}</p>
                             <div className="property-details">
-                              <span>🛏️ {room.bedrooms} Bed</span>
-                              <span>🚿 {room.bathrooms} Bath</span>
+                              <span>{room.bedrooms} Bed</span>
+                              <span>{room.bathrooms} Bath</span>
                             </div>
                             <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.25rem 0' }}>
                               Owner: {room.createdBy?.name || 'Unknown'}
@@ -640,7 +664,7 @@ const Admin = () => {
                                 className="btn-edit"
                                 onClick={() => navigate(`/chat/${room._id}`)}
                               >
-                                💬 Open Chat
+                                Open Chat
                               </button>
                               <button
                                 className="btn-delete"
@@ -667,7 +691,11 @@ const Admin = () => {
                 <p>View and manage your group chat sessions.</p>
               </div>
               <div className="properties-list" style={{ textAlign: 'center', padding: '3rem' }}>
-                <div className="property-emoji" style={{ marginBottom: '1rem', fontSize: '3rem' }}>💬</div>
+                <div className="property-card-icon" style={{ margin: '0 auto 1rem' }} aria-hidden="true">
+                  <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15a3 3 0 01-3 3H8l-5 4V6a3 3 0 013-3h12a3 3 0 013 3v9z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                  </svg>
+                </div>
                 <h3>Go to My Chats</h3>
                 <p>All your active chat sessions with owners and renters are in one place.</p>
                 <button
@@ -675,7 +703,7 @@ const Admin = () => {
                   style={{ marginTop: '1rem' }}
                   onClick={() => navigate('/my-chats')}
                 >
-                  Open My Chats →
+                  Open My Chats
                 </button>
               </div>
             </div>

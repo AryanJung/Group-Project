@@ -5,15 +5,26 @@ import './ChatbotWidget.css';
 const WELCOME = {
   id: 0,
   role: 'bot',
-  text: "Hi! I'm your AI rental assistant 🏠\nAsk me anything about renting rooms, deposits, leases, or this platform.",
+  text: "Hi! I'm your AI rental assistant.\nAsk me anything about renting rooms, deposits, leases, or this platform.",
   ts: new Date(),
 };
+
+const MOCK_RECOMMENDATIONS = [
+  { id: 1, title: 'Sunny 2BHK near Ring Road', price: 'Rs 28,000/mo', image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=500&q=80' },
+  { id: 2, title: 'Compact Studio in Lalitpur', price: 'Rs 16,500/mo', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=500&q=80' },
+  { id: 3, title: 'Family Flat with Parking', price: 'Rs 35,000/mo', image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=500&q=80' },
+  { id: 4, title: 'Quiet Room near Campus', price: 'Rs 11,000/mo', image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=500&q=80' },
+];
+
+const getShuffledRecommendations = () =>
+  [...MOCK_RECOMMENDATIONS].sort(() => Math.random() - 0.5).slice(0, 3);
 
 const ChatbotWidget = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([WELCOME]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState(() => getShuffledRecommendations());
   const historyRef = useRef([]);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -73,7 +84,11 @@ const ChatbotWidget = () => {
         <div className="cw-panel">
           <div className="cw-header">
             <div className="cw-header-left">
-              <span className="cw-avatar">🏠</span>
+              <span className="cw-avatar" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+              </span>
               <div>
                 <p className="cw-title">AI Rental Assistant</p>
                 <p className="cw-subtitle">Powered by local AI</p>
@@ -84,9 +99,30 @@ const ChatbotWidget = () => {
               onClick={() => setOpen(false)}
               aria-label="Close chat"
             >
-              ✕
+              x
             </button>
           </div>
+
+          <section className="cw-recommendations" aria-label="Recommended properties">
+            <div className="cw-rec-header">
+              <p>Recommended Properties</p>
+              <button type="button" onClick={() => setRecommendations(getShuffledRecommendations())}>
+                Refresh Suggestions
+              </button>
+            </div>
+            <div className="cw-rec-grid">
+              {recommendations.map((property) => (
+                <article className="cw-rec-card" key={property.id}>
+                  <img src={property.image} alt="" />
+                  <div>
+                    <span>AI Match</span>
+                    <h3>{property.title}</h3>
+                    <p>{property.price}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <div className="cw-messages">
             {messages.map((m) => (
@@ -129,7 +165,9 @@ const ChatbotWidget = () => {
               disabled={loading || !input.trim()}
               aria-label="Send"
             >
-              ➤
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </form>
         </div>
@@ -141,7 +179,11 @@ const ChatbotWidget = () => {
         onClick={() => setOpen((v) => !v)}
         aria-label="Open AI chat assistant"
       >
-        {open ? '✕' : '💬'}
+        {open ? 'x' : (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M21 15a3 3 0 01-3 3H8l-5 4V6a3 3 0 013-3h12a3 3 0 013 3v9z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        )}
       </button>
     </div>
   );

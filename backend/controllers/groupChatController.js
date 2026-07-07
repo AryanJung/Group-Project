@@ -2,6 +2,7 @@ const GroupChat = require("../models/GroupChat");
 const GroupMessage = require("../models/GroupMessage");
 const Rental = require("../models/Rental");
 const Room = require("../models/Room");
+const User = require("../models/User");
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -50,8 +51,8 @@ const createGroupChat = async (req, res) => {
 
     const populated = await chat.populate([
       { path: "room", select: "title location image" },
-      { path: "owner", select: "name email" },
-      { path: "members", select: "name email" },
+      { path: "owner", select: "name username email" },
+      { path: "members", select: "name username email" },
     ]);
 
     return res.status(201).json(populated);
@@ -82,8 +83,8 @@ const getGroupChatByRoom = async (req, res) => {
     if (isOwner) {
       const chat = await GroupChat.findOne({ room: roomId })
         .populate("room", "title location image")
-        .populate("owner", "name email")
-        .populate("members", "name email");
+        .populate("owner", "name username email")
+        .populate("members", "name username email");
       if (!chat) return res.status(404).json({ message: "No group chat created for this room yet" });
       return res.status(200).json(chat);
     }
@@ -96,8 +97,8 @@ const getGroupChatByRoom = async (req, res) => {
 
     const chat = await GroupChat.findOne({ room: roomId, members: userId })
       .populate("room", "title location image")
-      .populate("owner", "name email")
-      .populate("members", "name email");
+      .populate("owner", "name username email")
+      .populate("members", "name username email");
 
     if (!chat) {
       return res.status(403).json({ message: "You have not been added to the group chat yet. Ask the owner to add you." });
@@ -120,8 +121,8 @@ const getMyGroupChats = async (req, res) => {
     const userId = req.user._id;
     const chats = await GroupChat.find({ $or: [{ owner: userId }, { members: userId }] })
       .populate("room", "title location image")
-      .populate("owner", "name email")
-      .populate("members", "name email")
+      .populate("owner", "name username email")
+      .populate("members", "name username email")
       .sort({ updatedAt: -1 });
 
     return res.status(200).json(chats);
@@ -140,8 +141,8 @@ const getGroupChat = async (req, res) => {
   try {
     const chat = await GroupChat.findById(req.params.id)
       .populate("room", "title location image")
-      .populate("owner", "name email")
-      .populate("members", "name email");
+      .populate("owner", "name username email")
+      .populate("members", "name username email");
 
     if (!chat) return res.status(404).json({ message: "Group chat not found" });
     if (!hasChatAccess(chat, req.user._id)) {
@@ -160,7 +161,6 @@ const getGroupChat = async (req, res) => {
 /**
  * POST /group-chats/:id/members
  * Body: { memberIds: string[] } or { addAll: true }
- * Only accepted renters for this room can be added.
  */
 const addMembers = async (req, res) => {
   try {
@@ -176,18 +176,19 @@ const addMembers = async (req, res) => {
       toAdd = rentals.map((r) => r.renter.toString());
     } else {
       const { memberIds = [] } = req.body;
-      const rentals = await Rental.find({ room: chat.room, renter: { $in: memberIds } });
-      toAdd = rentals.map((r) => r.renter.toString());
+      const users = await User.find({ _id: { $in: memberIds } }).select("_id");
+      toAdd = users.map((member) => member._id.toString());
     }
 
     const existing = new Set(chat.members.map((m) => m.toString()));
-    chat.members.push(...toAdd.filter((id) => !existing.has(id)));
+    const ownerId = chat.owner.toString();
+    chat.members.push(...toAdd.filter((id) => id !== ownerId && !existing.has(id)));
     await chat.save();
 
     const populated = await chat.populate([
       { path: "room", select: "title location image" },
-      { path: "owner", select: "name email" },
-      { path: "members", select: "name email" },
+      { path: "owner", select: "name username email" },
+      { path: "members", select: "name username email" },
     ]);
     return res.status(200).json(populated);
   } catch (error) {
@@ -213,8 +214,8 @@ const removeMember = async (req, res) => {
     await chat.save();
 
     const populated = await chat.populate([
-      { path: "owner", select: "name email" },
-      { path: "members", select: "name email" },
+      { path: "owner", select: "name username email" },
+      { path: "members", select: "name username email" },
     ]);
     return res.status(200).json(populated);
   } catch (error) {
@@ -239,7 +240,7 @@ const getChatMessages = async (req, res) => {
     const messages = await GroupMessage.find({ chat: chat._id })
       .sort({ createdAt: 1 })
       .limit(100)
-      .populate("sender", "name email");
+      .populate("sender", "name username email");
 
     return res.status(200).json(messages);
   } catch (error) {
@@ -269,7 +270,7 @@ const sendChatMessage = async (req, res) => {
       text: text.trim(),
     });
 
-    await message.populate("sender", "name email");
+    await message.populate("sender", "name username email");
     return res.status(201).json(message);
   } catch (error) {
     console.error("sendChatMessage error:", error);
