@@ -7,34 +7,34 @@ import './Chat.css';
 const POLL_INTERVAL_MS = 3000;
 
 const Chat = () => {
-  const { id } = useParams(); // this is a Room ID
+  const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [property, setProperty] = useState(null);
-  const [chat, setChat] = useState(null);           // resolved GroupChat document
+  const [chat, setChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
-  // null = checking, false = denied, true = ok
   const [status, setStatus] = useState(null);
   const [statusError, setStatusError] = useState('');
   const [sendError, setSendError] = useState('');
 
   const messagesEndRef = useRef(null);
   const pollTimerRef = useRef(null);
-  const chatIdRef = useRef(null); // stable ref so interval callback doesn't go stale
+  const chatIdRef = useRef(null);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Fetch messages using the resolved GroupChat ID
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (showLoader = false) => {
     const chatId = chatIdRef.current;
     if (!chatId) return;
+
+    if (showLoader) setIsFetching(true);
     try {
       const data = await groupChatAPI.getMessages(chatId);
       setMessages(data);
@@ -44,10 +44,11 @@ const Chat = () => {
         setStatus(false);
         setStatusError('Access revoked. You no longer have access to this chat.');
       }
+    } finally {
+      if (showLoader) setIsFetching(false);
     }
   }, []);
 
-  // On mount: redirect if not logged in → resolve Room ID to GroupChat → start polling
   useEffect(() => {
     if (!user?.token) {
       navigate(`/property/${id}`, { replace: true });
@@ -55,7 +56,6 @@ const Chat = () => {
     }
 
     const init = async () => {
-      // 1. Resolve Room ID → GroupChat
       try {
         const chatDoc = await groupChatAPI.getByRoom(id);
         setChat(chatDoc);
@@ -68,17 +68,15 @@ const Chat = () => {
         return;
       }
 
-      // 2. Load property header info (non-fatal)
       try {
         const prop = await adminAPI.getPropertyById(id);
         setProperty(prop);
-      } catch { /* non-fatal */ }
+      } catch {
+        /* non-fatal */
+      }
 
-      // 3. Initial message load
-      await fetchMessages();
-
-      // 4. Start polling
-      pollTimerRef.current = setInterval(fetchMessages, POLL_INTERVAL_MS);
+      await fetchMessages(true);
+      pollTimerRef.current = setInterval(() => fetchMessages(false), POLL_INTERVAL_MS);
     };
 
     init();
@@ -101,18 +99,20 @@ const Chat = () => {
       setSendError(
         err.response?.data?.message || 'Failed to send message. Please try again.'
       );
+      setNewMessage(text);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── States ──────────────────────────────────────────────────────────────────
-
   if (status === null) {
     return (
       <div className="chat-page">
-        <div className="chat-container">
-          <div className="chat-access-denied"><p>Connecting to group chat…</p></div>
+        <div className="chat-container chat-container--state">
+          <div className="chat-state-card">
+            <div className="chat-loading-spinner" aria-hidden="true" />
+            <p>Connecting to group chat...</p>
+          </div>
         </div>
       </div>
     );
@@ -121,10 +121,13 @@ const Chat = () => {
   if (status === false) {
     return (
       <div className="chat-page">
-        <div className="chat-container">
-          <div className="chat-access-denied">
+        <div className="chat-container chat-container--state">
+          <div className="chat-state-card chat-state-card--error">
+            <h2>Unable to open chat</h2>
             <p>{statusError}</p>
-            <button onClick={() => navigate(`/property/${id}`)}>← Back to Property</button>
+            <button type="button" onClick={() => navigate(`/property/${id}`)}>
+              Back to Property
+            </button>
           </div>
         </div>
       </div>
@@ -133,16 +136,39 @@ const Chat = () => {
 
   const isOwner = chat?.owner?._id === user?._id || chat?.owner === user?._id;
   const myRole = isOwner ? 'Owner' : 'Renter';
-  const memberNames = chat?.members?.map((m) => m.name).join(', ') || '';
+  const memberCount = chat?.members?.length || 0;
+
+  const groupMessagesByDate = () => {
+    const groups = [];
+    let currentDate = null;
+
+    messages.forEach((msg) => {
+      const dateKey = new Date(msg.createdAt).toLocaleDateString();
+      if (dateKey !== currentDate) {
+        currentDate = dateKey;
+        groups.push({ type: 'date', key: dateKey, label: dateKey });
+      }
+      groups.push({ type: 'message', key: msg._id, data: msg });
+    });
+
+    return groups;
+  };
 
   return (
     <div className="chat-page">
       <div className="chat-container">
-        {/* Header */}
-        <div className="chat-header">
-          <button onClick={() => navigate(`/property/${id}`)} className="btn-back-chat">
-            ← Back
+        <header className="chat-header">
+          <button
+            type="button"
+            onClick={() => navigate(`/property/${id}`)}
+            className="btn-back-chat"
+            aria-label="Back to property"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
+
           <div className="chat-header-info">
             <h2>{chat?.name || 'Group Chat'}</h2>
             {property && (
@@ -150,32 +176,58 @@ const Chat = () => {
                 {property.title} · {property.location}
               </p>
             )}
-            <p className="chat-role-badge">
-              You are: <strong>{myRole}</strong>
-              {memberNames && <span style={{ marginLeft: '0.5rem', color: '#9ca3af', fontWeight: 400 }}>· {chat?.members?.length} member{chat?.members?.length !== 1 ? 's' : ''}</span>}
-            </p>
+            <div className="chat-header-meta">
+              <span className={`chat-role-pill chat-role-pill--${myRole.toLowerCase()}`}>
+                {myRole}
+              </span>
+              <span className="chat-member-count">
+                {memberCount} member{memberCount !== 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
-        </div>
+        </header>
 
-        {/* Messages */}
-        <div className="chat-messages">
-          {messages.length === 0 && (
-            <p className="chat-empty">No messages yet. Start the conversation!</p>
+        <div className="chat-messages" aria-live="polite">
+          {isFetching && messages.length === 0 && (
+            <div className="chat-empty">
+              <div className="chat-loading-spinner chat-loading-spinner--small" />
+              <p>Loading messages...</p>
+            </div>
           )}
 
-          {messages.map((msg) => {
+          {!isFetching && messages.length === 0 && (
+            <div className="chat-empty">
+              <p>No messages yet</p>
+              <span>Start the conversation with your group.</span>
+            </div>
+          )}
+
+          {groupMessagesByDate().map((item) => {
+            if (item.type === 'date') {
+              return (
+                <div key={item.key} className="chat-date-divider">
+                  <span>{item.label}</span>
+                </div>
+              );
+            }
+
+            const msg = item.data;
             const isMe = msg.sender?._id === user._id || msg.sender === user._id;
             const senderName = msg.sender?.name || 'Unknown';
+            const initials = senderName.charAt(0).toUpperCase();
 
             return (
               <div
-                key={msg._id}
-                className={`message ${isMe ? 'message-user' : 'message-broker'}`}
+                key={item.key}
+                className={`message-row ${isMe ? 'message-row--own' : 'message-row--other'}`}
               >
-                <div className="message-content">
-                  {!isMe && (
-                    <span className="message-sender-name">{senderName}</span>
-                  )}
+                {!isMe && (
+                  <div className="message-avatar" aria-hidden="true">
+                    {initials}
+                  </div>
+                )}
+                <div className={`message-bubble ${isMe ? 'message-bubble--own' : 'message-bubble--other'}`}>
+                  {!isMe && <span className="message-sender-name">{senderName}</span>}
                   <p>{msg.text}</p>
                   <span className="message-time">
                     {new Date(msg.createdAt).toLocaleTimeString([], {
@@ -191,20 +243,35 @@ const Chat = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {sendError && <p className="chat-send-error">{sendError}</p>}
+        {sendError && (
+          <div className="chat-send-error" role="alert">
+            {sendError}
+          </div>
+        )}
 
-        {/* Input */}
         <form className="chat-input-form" onSubmit={handleSend}>
           <input
             type="text"
             className="chat-input"
-            placeholder="Type a message…"
+            placeholder="Type a message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             disabled={isLoading}
+            aria-label="Message text"
           />
-          <button type="submit" className="btn-send" disabled={isLoading || !newMessage.trim()}>
-            {isLoading ? '…' : 'Send'}
+          <button
+            type="submit"
+            className="btn-send"
+            disabled={isLoading || !newMessage.trim()}
+            aria-label="Send message"
+          >
+            {isLoading ? (
+              <span className="chat-send-loading">Sending</span>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
           </button>
         </form>
       </div>

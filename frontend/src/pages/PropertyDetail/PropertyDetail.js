@@ -3,19 +3,64 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../../context/PropertiesContext';
 import { useAuth } from '../../context/AuthContext';
 import { adminAPI, reviewAPI, rentalAPI, applicationAPI } from '../../services/api';
+import {
+  buildPropertyFeatures,
+  formatDescription,
+  getPropertyImages,
+  getPropertyVideos,
+  getVideoEmbedUrl,
+} from '../../utils/propertyHelpers';
+import { needsKycVerification } from '../../utils/kyc';
 import './PropertyDetail.css';
 
 const PENDING_STATUSES = ['pending_verification', 'pending'];
+
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M20 6L9 17l-5-5"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const StarRating = ({ rating, interactive = false, onSelect }) => (
+  <div className={`star-rating${interactive ? ' star-rating--interactive' : ''}`}>
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={star}
+        type="button"
+        className={`star-btn${star <= rating ? ' star-btn--filled' : ''}`}
+        onClick={interactive ? () => onSelect(star) : undefined}
+        disabled={!interactive}
+        aria-label={`${star} star${star !== 1 ? 's' : ''}`}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+            fill={star <= rating ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    ))}
+  </div>
+);
 
 const PropertyDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { properties } = useProperties();
-  const { user, hasReviewAccess } = useAuth();
+  const { user, hasReviewAccess, isAdmin } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  // Rental access state: null = unknown, { isOwner, isRenter }
   const [rentalStatus, setRentalStatus] = useState(null);
   const [renting, setRenting] = useState(false);
 
@@ -42,6 +87,7 @@ const PropertyDetail = () => {
     const loadProperty = async () => {
       try {
         setLoading(true);
+        setActiveImageIndex(0);
 
         if (!isValidObjectId(id)) {
           const foundProperty = properties.find(
@@ -85,9 +131,7 @@ const PropertyDetail = () => {
     loadProperty();
   }, [id, properties]);
 
-  // Load rental status whenever the property id or logged-in user changes
   useEffect(() => {
-    const isValidObjectId = (v) => /^[0-9a-fA-F]{24}$/.test(v);
     if (!user?.token || !isValidObjectId(id)) return;
 
     rentalAPI
@@ -101,6 +145,12 @@ const PropertyDetail = () => {
       setErrorMessage('Please log in to apply for this property.');
       return;
     }
+
+    if (needsKycVerification(user, isAdmin)) {
+      navigate('/kyc');
+      return;
+    }
+
     const message = window.prompt('Add a note to the owner (optional):') ?? '';
     setRenting(true);
     setErrorMessage('');
@@ -181,7 +231,6 @@ const PropertyDetail = () => {
           userId: {
             name: savedReviewFromDB.user?.name || user.name || 'You',
           },
-          avatar: '👤',
           rating: savedReviewFromDB.rating,
           censoredReview: savedReviewFromDB.censoredReview,
           createdAt: savedReviewFromDB.createdAt,
@@ -212,7 +261,6 @@ const PropertyDetail = () => {
 
   const hasChatAccess = rentalStatus?.isOwner || rentalStatus?.isRenter;
   const applicationStatus = rentalStatus?.application?.status ?? null;
-  const applicationId = rentalStatus?.application?._id ?? null;
   const isAtCapacity =
     !rentalStatus?.isOwner &&
     !rentalStatus?.isRenter &&
@@ -230,8 +278,11 @@ const PropertyDetail = () => {
   if (loading) {
     return (
       <div className="property-detail">
-        <div className="container">
-          <div className="loading">Loading property details...</div>
+        <div className="property-detail-container">
+          <div className="property-detail-loading">
+            <div className="loading-spinner" aria-hidden="true" />
+            <p>Loading property details...</p>
+          </div>
         </div>
       </div>
     );
@@ -240,114 +291,180 @@ const PropertyDetail = () => {
   if (!property) {
     return (
       <div className="property-detail">
-        <div className="container">
-          <div className="error">Property not found</div>
-          <button onClick={() => navigate('/')} className="btn-back">
-            Back to Home
-          </button>
+        <div className="property-detail-container">
+          <div className="property-detail-error">
+            <h2>Property not found</h2>
+            <p>The listing you are looking for may have been removed or is unavailable.</p>
+            <button onClick={() => navigate('/')} className="btn-back" type="button">
+              Back to Home
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  const images = getPropertyImages(property);
+  const videos = getPropertyVideos(property);
+  const features = buildPropertyFeatures(property);
+  const descriptionParagraphs = formatDescription(property.description);
+  const hasGallery = images.length > 0;
+
   return (
     <div className="property-detail">
-      <div className="container">
-        <button onClick={() => navigate('/')} className="btn-back">
-          ← Back to Properties
+      <div className="property-detail-container">
+        <button onClick={() => navigate('/')} className="btn-back" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back to Properties
         </button>
 
-        <div className="property-detail-content">
-          <div className="property-detail-image">
-            <span className="property-emoji-large">{property.image}</span>
-          </div>
-
-          <div className="property-detail-info">
-            <h1 className="property-detail-title">{property.title}</h1>
-            <p className="property-detail-location">📍 {property.location}</p>
-
-            <div className="property-detail-specs">
-              <div className="spec-item">
-                <span className="spec-icon">🛏️</span>
-                <span className="spec-label">Bedrooms</span>
-                <span className="spec-value">{property.bedrooms}</span>
+        {/* Hero / Gallery */}
+        <section className="property-hero">
+          {hasGallery ? (
+            <div className="property-gallery">
+              <div className="gallery-main">
+                <img
+                  src={images[activeImageIndex]}
+                  alt={`${property.title} - view ${activeImageIndex + 1}`}
+                  className="gallery-main-image"
+                />
+                {images.length > 1 && (
+                  <span className="gallery-counter">
+                    {activeImageIndex + 1} / {images.length}
+                  </span>
+                )}
               </div>
-              <div className="spec-item">
-                <span className="spec-icon">🚿</span>
-                <span className="spec-label">Bathrooms</span>
-                <span className="spec-value">{property.bathrooms}</span>
-              </div>
-              <div className="spec-item">
-                <span className="spec-icon">📐</span>
-                <span className="spec-label">Area</span>
-                <span className="spec-value">{property.area}</span>
+              {images.length > 1 && (
+                <div className="gallery-thumbnails">
+                  {images.map((src, index) => (
+                    <button
+                      key={src + index}
+                      type="button"
+                      className={`gallery-thumb${index === activeImageIndex ? ' gallery-thumb--active' : ''}`}
+                      onClick={() => setActiveImageIndex(index)}
+                      aria-label={`View photo ${index + 1}`}
+                    >
+                      <img src={src} alt="" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="property-gallery property-gallery--placeholder">
+              <div className="gallery-placeholder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                  <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>No photos available</span>
               </div>
             </div>
+          )}
 
-            <div className="property-detail-price-section">
-              <h2 className="property-detail-price">{property.price}</h2>
+          <aside className="property-summary">
+            <div className="property-summary-header">
+              <h1 className="property-title">{property.title}</h1>
+              <p className="property-location">{property.location}</p>
+              {property.rating > 0 && (
+                <div className="property-rating-badge">
+                  <StarRating rating={Math.round(property.rating)} />
+                  <span>{property.rating.toFixed(1)}</span>
+                </div>
+              )}
             </div>
 
-            <div className="property-detail-actions">
-              {/* Owner or accepted renter */}
+            <div className="property-price-block">
+              <span className="property-price-label">Monthly rent</span>
+              <p className="property-price">{property.price}</p>
+            </div>
+
+            {features.length > 0 && (
+              <div className="property-features">
+                <h2 className="section-label">Features</h2>
+                <ul className="feature-tags">
+                  {features.map((feature) => (
+                    <li key={feature} className="feature-tag">
+                      <span className="feature-tag-icon"><CheckIcon /></span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="property-actions">
               {hasChatAccess ? (
                 <>
-                  <button className="btn-talk-to-broker" onClick={handleOpenChat}>
-                    💬 Open Group Chat
+                  <button className="btn-primary" onClick={handleOpenChat} type="button">
+                    Open Group Chat
                   </button>
                   {rentalStatus?.isRenter && (
                     <button
-                      onClick={() => rentalAPI.cancelRent(id).then(() => setRentalStatus((p) => ({ ...p, isRenter: false, isRented: false })))}
+                      type="button"
+                      className="btn-danger"
+                      onClick={() =>
+                        rentalAPI
+                          .cancelRent(id)
+                          .then(() =>
+                            setRentalStatus((p) => ({ ...p, isRenter: false, isRented: false }))
+                          )
+                      }
                       disabled={renting}
-                      style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', marginLeft: '0.5rem' }}
                     >
                       Cancel Rental
                     </button>
                   )}
                 </>
               ) : applicationStatus === 'pending' ? (
-                /* Application submitted — waiting for owner */
                 <>
-                  <button className="btn-talk-to-broker" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f59e0b' }}>
-                    ⏳ Application Pending
+                  <button className="btn-primary btn-primary--muted" disabled type="button">
+                    Application Pending
                   </button>
                   <button
+                    type="button"
+                    className="btn-outline btn-outline--danger"
                     onClick={handleWithdrawApplication}
                     disabled={renting}
-                    style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', marginLeft: '0.5rem' }}
                   >
-                    {renting ? 'Withdrawing…' : 'Withdraw'}
+                    {renting ? 'Withdrawing...' : 'Withdraw Application'}
                   </button>
                 </>
               ) : applicationStatus === 'rejected' ? (
-                /* Rejected — can try again */
                 <>
-                  <button className="btn-talk-to-broker" disabled style={{ opacity: 0.5, cursor: 'not-allowed', background: '#ef4444' }}>
-                    ❌ Application Rejected
+                  <button className="btn-primary btn-primary--danger" disabled type="button">
+                    Application Rejected
                   </button>
                   <button
+                    type="button"
+                    className="btn-primary"
                     onClick={handleApply}
                     disabled={renting}
-                    style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', marginLeft: '0.5rem' }}
                   >
-                    {renting ? 'Submitting…' : 'Apply Again'}
+                    {renting ? 'Submitting...' : 'Apply Again'}
                   </button>
                 </>
               ) : isAtCapacity ? (
-                <button className="btn-talk-to-broker" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                  🔒 Listing Full ({property?.maxRenters}/{property?.maxRenters} renters)
+                <button className="btn-primary" disabled type="button">
+                  Listing Full ({property?.maxRenters}/{property?.maxRenters} renters)
                 </button>
               ) : canApply ? (
                 <button
-                  className="btn-talk-to-broker"
+                  type="button"
+                  className="btn-primary"
                   onClick={handleApply}
                   disabled={renting}
                 >
-                  {renting ? 'Submitting…' : '🏠 Apply to Rent'}
+                  {renting ? 'Submitting...' : 'Apply to Rent'}
                 </button>
               ) : null}
+
               <button
-                className="btn-location"
+                type="button"
+                className="btn-outline"
                 onClick={() => {
                   const { coordinates, location } = property;
                   const hasCoords = coordinates && coordinates.lat && coordinates.lng;
@@ -357,29 +474,81 @@ const PropertyDetail = () => {
                   window.open(url, '_blank', 'noopener,noreferrer');
                 }}
               >
-                View exact location
+                View on Map
               </button>
-              <button className="btn-view" onClick={() => navigate('/')}>
-                View More Properties
+              <button type="button" className="btn-ghost" onClick={() => navigate('/')}>
+                Browse More Properties
               </button>
             </div>
-          </div>
-        </div>
 
-        <div className="reviews-section">
+            {(errorMessage || successMessage) && (
+              <div className="property-action-messages">
+                {errorMessage && <p className="action-error">{errorMessage}</p>}
+                {successMessage && <p className="action-success">{successMessage}</p>}
+              </div>
+            )}
+          </aside>
+        </section>
+
+        {/* Description */}
+        {descriptionParagraphs.length > 0 && (
+          <section className="property-section property-description-section">
+            <h2 className="section-heading">About this property</h2>
+            <div className="property-description">
+              {descriptionParagraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Videos */}
+        {videos.length > 0 && (
+          <section className="property-section property-videos-section">
+            <h2 className="section-heading">Property Videos</h2>
+            <div className="property-videos-grid">
+              {videos.map((videoUrl, index) => {
+                const embedUrl = getVideoEmbedUrl(videoUrl);
+                const isEmbed = /youtube\.com\/embed|player\.vimeo\.com/i.test(embedUrl);
+                return (
+                  <div key={videoUrl + index} className="property-video-card">
+                    {isEmbed ? (
+                      <iframe
+                        src={embedUrl}
+                        title={`Property video ${index + 1}`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video controls preload="metadata" src={videoUrl}>
+                        <track kind="captions" />
+                        Your browser does not support embedded videos.
+                      </video>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Reviews */}
+        <section className="reviews-section">
           <div className="reviews-display-pane">
-            <h2>Community Reviews ({reviews.length})</h2>
+            <h2 className="section-heading">Community Reviews ({reviews.length})</h2>
             {reviews.length === 0 ? (
               <p className="no-reviews">
-                No reviews yet. Be the first to express your thoughts!
+                No reviews yet. Be the first to share your experience.
               </p>
             ) : (
               <div className="reviews-list">
                 {reviews.map((review) => (
-                  <div key={review._id} className="review-card">
+                  <article key={review._id} className="review-card">
                     <div className="review-card-header">
                       <div className="review-user-info">
-                        <span className="user-avatar">{review.avatar || '👤'}</span>
+                        <div className="user-avatar" aria-hidden="true">
+                          {(review.userId?.name || 'A').charAt(0).toUpperCase()}
+                        </div>
                         <div>
                           <h4 className="user-name">
                             {review.userId?.name || 'Anonymous User'}
@@ -389,43 +558,29 @@ const PropertyDetail = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="review-stars">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <span key={index} className="star-filled">
-                            {index < review.rating ? '⭐' : '☆'}
-                          </span>
-                        ))}
-                      </div>
+                      <StarRating rating={review.rating} />
                     </div>
                     <p className="review-text">{review.censoredReview}</p>
                     {review.wordsBlurred && (
-                      <span className="ai-flag-tag">Sensitive words were automatically censored</span>
+                      <span className="ai-flag-tag">
+                        Sensitive words were automatically censored
+                      </span>
                     )}
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
           </div>
 
           <div className="reviews-form-pane">
-            <h2>Leave a Review</h2>
+            <h2 className="section-heading">Leave a Review</h2>
             {!hasReviewAccess ? (
               <p className="no-reviews">
                 Please log in with a registered account to submit a review.
               </p>
             ) : (
               <form onSubmit={handleReviewSubmit}>
-                <div className="star-rating">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <span
-                      key={star}
-                      onClick={() => setRating(star)}
-                      style={{ cursor: 'pointer', fontSize: '2rem' }}
-                    >
-                      {star <= rating ? '⭐' : '☆'}
-                    </span>
-                  ))}
-                </div>
+                <StarRating rating={rating} interactive onSelect={setRating} />
 
                 {errorMessage && (
                   <div className="review-error-banner">{errorMessage}</div>
@@ -437,18 +592,18 @@ const PropertyDetail = () => {
                 <textarea
                   value={reviewText}
                   onChange={(event) => setReviewText(event.target.value)}
-                  placeholder="Write your review... Note: Any vulgar text will automatically be filtered by our XLM-R classifier system."
+                  placeholder="Share your experience with this property. Inappropriate language will be automatically filtered."
                   rows="4"
                   disabled={submitting}
                 />
 
-                <button type="submit" disabled={submitting}>
-                  {submitting ? 'Running AI Moderation Check...' : 'Submit Review'}
+                <button type="submit" className="btn-primary" disabled={submitting}>
+                  {submitting ? 'Running moderation check...' : 'Submit Review'}
                 </button>
               </form>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -145,6 +145,23 @@
   gap: 1rem;
 }
 
+.btn-profile-link {
+  color: #051747;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: none;
+  border: none;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.btn-profile-link:hover {
+  background: rgba(5, 23, 71, 0.06);
+}
+
 .user-name {
   color: #051747;
   font-weight: 600;

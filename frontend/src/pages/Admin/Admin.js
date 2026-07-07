@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { adminAPI, rentalAPI, applicationAPI, groupChatAPI } from '../../services/api';
+import { needsKycVerification } from '../../utils/kyc';
 import MapPicker from './MapPicker';
 import './Admin.css';
 
 const Admin = () => {
-  const { isAuthenticated, isOwner, user, logout } = useAuth();
+  const { isAuthenticated, isOwner, user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -189,29 +190,29 @@ const Admin = () => {
 
           <nav className="admin-nav-menu">
             <button className={activeTab === 'profile' ? 'active' : ''} onClick={() => setActiveTab('profile')}>
-              👤 My Profile
+              My Profile
             </button>
 
             {isOwner && (
               <button className={activeTab === 'houses' ? 'active' : ''} onClick={() => setActiveTab('houses')}>
-                🏠 Manage Houses
+                Manage Houses
               </button>
             )}
 
             {isOwner && (
               <button className={activeTab === 'applications' ? 'active' : ''} onClick={() => setActiveTab('applications')}>
-                📋 Applications
+                Applications
               </button>
             )}
 
             {!isOwner && (
               <button className={activeTab === 'rentals' ? 'active' : ''} onClick={() => setActiveTab('rentals')}>
-                🔑 My Rentals
+                My Rentals
               </button>
             )}
 
             <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => setActiveTab('chat')}>
-              💬 Chat Messages
+              Chat Messages
             </button>
           </nav>
 
@@ -245,6 +246,26 @@ const Admin = () => {
                     </div>
                   </div>
                 </div>
+
+                <div className="profile-kyc-section">
+                  <h3>Identity Verification</h3>
+                  {user?.kycVerified ? (
+                    <div className="kyc-status-card kyc-status-card--verified">
+                      <p>Your identity has been verified.</p>
+                      <Link to="/kyc" className="btn-kyc-link">View verification details</Link>
+                    </div>
+                  ) : (
+                    <div className="kyc-status-card kyc-status-card--pending">
+                      <p>
+                        Complete KYC verification to list properties or apply to rent.
+                        Verification is required before you can use these features.
+                      </p>
+                      <Link to="/kyc" className="btn-kyc-link btn-kyc-link--primary">
+                        Complete KYC Verification
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -261,8 +282,15 @@ const Admin = () => {
                 <button
                   className="btn-add-property"
                   onClick={() => {
-                    if (showAddForm) resetForm();
-                    else setShowAddForm(true);
+                    if (showAddForm) {
+                      resetForm();
+                      return;
+                    }
+                    if (needsKycVerification(user, isAdmin)) {
+                      navigate('/kyc');
+                      return;
+                    }
+                    setShowAddForm(true);
                   }}
                 >
                   {showAddForm ? 'Cancel' : '+ Add New Property'}

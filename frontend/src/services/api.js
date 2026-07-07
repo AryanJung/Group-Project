@@ -57,6 +57,8 @@ const roomToProperty = (room) => ({
   area: room.area || 'N/A',
   image: room.image || room.images?.[0] || '🏠',
   images: room.images || [],
+  videos: room.videos || [],
+  features: room.features || [],
   rating: room.rating ?? 0,
   reviews: room.reviews || [],
   createdBy: room.createdBy || null,

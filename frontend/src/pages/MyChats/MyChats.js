@@ -28,7 +28,10 @@ const MyChats = () => {
     return (
       <div className="my-chats-page">
         <div className="my-chats-container">
-          <p className="my-chats-status">Loading your chats…</p>
+          <div className="my-chats-loading">
+            <div className="my-chats-spinner" aria-hidden="true" />
+            <p>Loading your chats...</p>
+          </div>
         </div>
       </div>
     );
@@ -37,69 +40,84 @@ const MyChats = () => {
   return (
     <div className="my-chats-page">
       <div className="my-chats-container">
-        <div className="my-chats-header">
-          <h1>💬 My Chats</h1>
+        <header className="my-chats-header">
+          <h1>My Chats</h1>
           <p className="my-chats-subtitle">
-            All group chats you are part of as owner or renter
+            Group conversations for properties you own or rent
           </p>
-        </div>
+        </header>
 
-        {error && <p className="my-chats-error">{error}</p>}
+        {error && (
+          <div className="my-chats-error" role="alert">
+            {error}
+          </div>
+        )}
 
         {!error && chats.length === 0 && (
           <div className="my-chats-empty">
-            <span className="my-chats-empty-icon">💬</span>
-            <p>No chats yet.</p>
+            <div className="my-chats-empty-icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <p>No chats yet</p>
             <p className="my-chats-empty-hint">
               Rent a property or list your own and create a group chat to get started.
             </p>
-            <button className="my-chats-browse-btn" onClick={() => navigate('/')}>
+            <button type="button" className="my-chats-browse-btn" onClick={() => navigate('/')}>
               Browse Properties
             </button>
           </div>
         )}
 
-        <ul className="my-chats-list">
-          {chats.map((chat) => {
-            const isOwner =
-              chat.owner?._id === user?._id || chat.owner === user?._id;
-            const myRole = isOwner ? 'Owner' : 'Renter';
-            const roomId = chat.room?._id || chat.room;
+        {chats.length > 0 && (
+          <ul className="my-chats-list">
+            {chats.map((chat) => {
+              const isOwner =
+                chat.owner?._id === user?._id || chat.owner === user?._id;
+              const myRole = isOwner ? 'Owner' : 'Renter';
+              const roomId = chat.room?._id || chat.room;
+              const roomTitle = chat.room?.title || chat.name;
 
-            return (
-              <li
-                key={chat._id}
-                className="my-chats-item"
-                onClick={() => navigate(`/chat/${roomId}`)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && navigate(`/chat/${roomId}`)}
-              >
-                <span className="my-chats-room-icon">
-                  {chat.room?.image || '🏠'}
-                </span>
-                <div className="my-chats-info">
-                  <h3 className="my-chats-room-title">{chat.name}</h3>
-                  {chat.room?.title && (
-                    <p className="my-chats-room-location">🏠 {chat.room.title}</p>
-                  )}
-                  {chat.room?.location && (
-                    <p className="my-chats-room-location">📍 {chat.room.location}</p>
-                  )}
-                  <p className="my-chats-other-party">
-                    {chat.members?.length || 0} member{chat.members?.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="my-chats-meta">
-                  <span className={`my-chats-role-badge my-chats-role-${myRole.toLowerCase()}`}>
-                    {myRole}
-                  </span>
-                  <span className="my-chats-chevron">›</span>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+              return (
+                <li key={chat._id}>
+                  <button
+                    type="button"
+                    className="my-chats-item"
+                    onClick={() => navigate(`/chat/${roomId}`)}
+                  >
+                    <div className="my-chats-avatar" aria-hidden="true">
+                      {roomTitle.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="my-chats-info">
+                      <h3 className="my-chats-room-title">{chat.name}</h3>
+                      {chat.room?.title && (
+                        <p className="my-chats-room-meta">{chat.room.title}</p>
+                      )}
+                      {chat.room?.location && (
+                        <p className="my-chats-room-meta">{chat.room.location}</p>
+                      )}
+                      <p className="my-chats-member-count">
+                        {chat.members?.length || 0} member
+                        {chat.members?.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div className="my-chats-meta">
+                      <span className={`my-chats-role-badge my-chats-role-${myRole.toLowerCase()}`}>
+                        {myRole}
+                      </span>
+                      <span className="my-chats-chevron" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );

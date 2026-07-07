@@ -244,6 +244,68 @@
   font-weight: 500;
 }
 
+.profile-kyc-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.profile-kyc-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  color: #051747;
+}
+
+.kyc-status-card {
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.kyc-status-card p {
+  margin: 0 0 1rem;
+  color: #475569;
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.kyc-status-card--verified {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.kyc-status-card--pending {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.btn-kyc-link {
+  display: inline-block;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  color: #051747;
+  border: 1.5px solid #051747;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-kyc-link:hover {
+  background: #051747;
+  color: #fff;
+}
+
+.btn-kyc-link--primary {
+  background: #051747;
+  color: #fff;
+  border-color: #051747;
+}
+
+.btn-kyc-link--primary:hover {
+  background: #081f62;
+}
+
 .selected-location {
   margin-top: 0.75rem;
   font-size: 0.85rem;

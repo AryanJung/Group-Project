@@ -22,9 +22,9 @@ const getNotificationDestination = (notification) => {
 };
 
 const typeLabel = {
-  new_application: '📋 New Application',
-  application_accepted: '✅ Application Accepted',
-  application_rejected: '❌ Application Rejected',
+  new_application: 'New Application',
+  application_accepted: 'Application Accepted',
+  application_rejected: 'Application Rejected',
 };
 
 // ─── Notification Bell ────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ const NotificationBell = () => {
                   className={`notif-item ${!n.read ? 'notif-item--unread' : ''}`}
                   onClick={() => handleClickNotification(n)}
                 >
-                  <div className="notif-item-type">{typeLabel[n.type] || '🔔 Notification'}</div>
+                  <div className="notif-item-type">{typeLabel[n.type] || 'Notification'}</div>
                   <div className="notif-item-message">{n.message}</div>
                   <div className="notif-item-meta">
                     {n.room?.title && <span className="notif-room">{n.room.title}</span>}
@@ -162,7 +162,7 @@ const NotificationBell = () => {
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 const Header = () => {
-  const { user, logout, isAuthenticated, isOwner, isAdmin, isSuperAdmin } = useAuth();
+  const { user, logout, isAuthenticated, isOwner, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showLogin, setShowLogin] = useState(false);
@@ -200,10 +200,6 @@ const Header = () => {
             <a href="#about" className="nav-link" onClick={(e) => handleNavClick(e, 'about')}>About</a>
             <a href="#contact" className="nav-link" onClick={(e) => handleNavClick(e, 'contact')}>Contact</a>
 
-            {/* KYC link — show if authenticated but not yet verified or admin */}
-            {isAuthenticated && !isAdmin && !user?.kycVerified && (
-              <Link to="/kyc" className="nav-link">KYC</Link>
-            )}
             {/* Admin dashboard — owners + admins */}
             {isAuthenticated && isOwner && (
               <Link to="/admin" className="nav-link">Admin</Link>
@@ -217,7 +213,14 @@ const Header = () => {
           <div className="auth-buttons">
             {isAuthenticated ? (
               <div className="user-menu">
-                <span className="user-name">Welcome, {user?.name}</span>
+                <button
+                  type="button"
+                  className="btn-profile-link"
+                  onClick={() => navigate('/admin')}
+                  title="My Profile"
+                >
+                  {user?.name}
+                </button>
 
                 {/* Chat icon */}
                 <button
