@@ -48,6 +48,7 @@ const Admin = () => {
     maxRenters: 1,
   };
   const [formData, setFormData] = useState(emptyForm);
+  const [selectedFiles, setSelectedFiles] = useState([]); // Track cloud upload image target selections
 
   // Read URL query params on mount — notification deep-link support
   useEffect(() => {
@@ -107,8 +108,15 @@ const Admin = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
+
   const resetForm = () => {
     setFormData(emptyForm);
+    setSelectedFiles([]);
     setEditingProperty(null);
     setShowAddForm(false);
     setFormError('');
@@ -128,6 +136,7 @@ const Admin = () => {
       maxRenters: property.maxRenters ?? 1,
       image: property.image || '',
     });
+    setSelectedFiles([]);
     setFormError('');
     setShowAddForm(true);
     setActiveTab('houses');
@@ -154,22 +163,35 @@ const Admin = () => {
 
     setSubmitting(true);
     setFormError('');
-    const payload = {
-      ...formData,
-      // Send the raw numeric price — api.js will strip formatting if needed
-      price: formData.price,
-      bedrooms: parseInt(formData.bedrooms, 10),
-      bathrooms: parseInt(formData.bathrooms, 10),
-    };
+
+    // Package fields inside multi-part FormData container structure
+    const multipartData = new FormData();
+    multipartData.append('title', formData.title);
+    multipartData.append('location', formData.location);
+    multipartData.append('description', formData.description);
+    multipartData.append('price', formData.price);
+    multipartData.append('area', formData.area);
+    multipartData.append('maxRenters', parseInt(formData.maxRenters, 10));
+    multipartData.append('bedrooms', parseInt(formData.bedrooms, 10));
+    multipartData.append('bathrooms', parseInt(formData.bathrooms, 10));
+    
+    if (formData.coordinates) {
+      multipartData.append('coordinates', JSON.stringify(formData.coordinates));
+    }
+
+    // Append standard file streams to match backend middleware definition
+    selectedFiles.forEach((file) => {
+      multipartData.append('images', file);
+    });
 
     try {
       if (editingProperty) {
-        const updated = await adminAPI.updateProperty(editingProperty._id || editingProperty.id, payload);
+        const updated = await adminAPI.updateProperty(editingProperty._id || editingProperty.id, multipartData);
         setMyRooms((prev) =>
           prev.map((r) => (String(r._id || r.id) === String(updated._id || updated.id) ? updated : r))
         );
       } else {
-        const created = await adminAPI.createProperty(payload);
+        const created = await adminAPI.createProperty(multipartData);
         setMyRooms((prev) => [created, ...prev]);
       }
       resetForm();
@@ -383,6 +405,24 @@ const Admin = () => {
                       </div>
                     </div>
 
+                    <div className="form-row">
+                      <div className="form-group form-group--wide">
+                        <label>Upload Property Pictures (Max 5)</label>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          multiple 
+                          onChange={handleFileChange} 
+                          style={{ padding: '0.5rem 0' }}
+                        />
+                        {selectedFiles.length > 0 && (
+                          <p style={{ fontSize: '0.85rem', color: '#6366f1', margin: '4px 0 0 0', fontWeight: 600 }}>
+                            {selectedFiles.length} item(s) selected ready for Cloudinary upload.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
                     <button type="submit" className="btn-submit-form" disabled={submitting}>
                       {submitting
                         ? editingProperty ? 'Updating...' : 'Adding...'
@@ -404,11 +444,15 @@ const Admin = () => {
                     {myRooms.map((property) => (
                       <div key={property._id || property.id} className="admin-property-card">
                         <div className="admin-property-image">
-                          <span className="property-card-icon" aria-hidden="true">
-                            <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
-                              <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                            </svg>
-                          </span>
+                          {property.image && property.image !== '🏠' ? (
+                            <img src={property.image} alt={property.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                          ) : (
+                            <span className="property-card-icon" aria-hidden="true">
+                              <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                                <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                              </svg>
+                            </span>
+                          )}
                         </div>
                         <div className="admin-property-content">
                           <h3>{property.title}</h3>
@@ -479,7 +523,6 @@ const Admin = () => {
                     {applications.map((app) => (
                       <div key={app._id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                         <div>
-                          {/* Listing name — shown when viewing all */}
                           {app.room?.title && (
                             <div style={{ fontSize: '0.72rem', background: '#f0f9ff', color: '#0369a1', display: 'inline-block', padding: '0.1rem 0.55rem', borderRadius: '99px', fontWeight: 600, marginBottom: '0.4rem' }}>
                               {app.room.title}
@@ -543,7 +586,7 @@ const Admin = () => {
                 )}
               </div>
 
-              {/* ── Group Chat creation ──────────────────────────── */}
+              {/* Group Chat creation */}
               {applicationsRoomId && (
                 <div style={{ borderTop: '1px solid #e5e7eb', padding: '1.25rem', background: '#f9fafb' }}>
                   <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', marginBottom: '0.75rem' }}>
@@ -568,7 +611,6 @@ const Admin = () => {
                         setGroupChatCreating(true);
                         setGroupChatMsg('');
                         try {
-                          // Create chat with all accepted renters added automatically
                           const acceptedRenterIds = applications
                             .filter((a) => a.status === 'accepted')
                             .map((a) => a.applicant?._id || a.applicant)
@@ -584,7 +626,6 @@ const Admin = () => {
                           setTimeout(() => navigate(`/chat/${roomId}`), 800);
                         } catch (e) {
                           const errMsg = e.response?.data?.message || 'Failed to create chat.';
-                          // If already exists, try to open it
                           if (errMsg.toLowerCase().includes('already') || e.response?.status === 409) {
                             setGroupChatMsg('Chat already exists. Opening it...');
                             setTimeout(() => navigate(`/chat/${applicationsRoomId}`), 800);
@@ -640,11 +681,15 @@ const Admin = () => {
                       return (
                         <div key={rental._id} className="admin-property-card">
                           <div className="admin-property-image">
-                            <span className="property-card-icon" aria-hidden="true">
-                              <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                              </svg>
-                            </span>
+                            {room.image && room.image !== '🏠' ? (
+                              <img src={room.image} alt={room.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                            ) : (
+                              <span className="property-card-icon" aria-hidden="true">
+                                <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                                  <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                                </svg>
+                              </span>
+                            )}
                           </div>
                           <div className="admin-property-content">
                             <h3>{room.title}</h3>

@@ -153,12 +153,47 @@ export const adminAPI = {
   },
 
   createProperty: async (propertyData) => {
-    const response = await api.post('/rooms', propertyToRoom(propertyData));
+    // Check if the data is already a FormData object or if it's a regular object
+    // If it's a regular object, we convert it to FormData to support images cleanly
+    let finalPayload = propertyData;
+    
+    if (!(propertyData instanceof FormData)) {
+      finalPayload = new FormData();
+      const standardData = propertyToRoom(propertyData);
+      Object.keys(standardData).forEach(key => {
+        if (key === 'coordinates' && standardData[key]) {
+          finalPayload.append('coordinates', JSON.stringify(standardData[key]));
+        } else {
+          finalPayload.append(key, standardData[key]);
+        }
+      });
+    }
+
+    // Force multipart headers explicitly so Express and Multer can capture it
+    const response = await api.post('/rooms', finalPayload, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return roomToProperty(response.data);
   },
 
   updateProperty: async (id, propertyData) => {
-    const response = await api.put(`/rooms/${id}`, propertyToRoom(propertyData));
+    let finalPayload = propertyData;
+    
+    if (!(propertyData instanceof FormData)) {
+      finalPayload = new FormData();
+      const standardData = propertyToRoom(propertyData);
+      Object.keys(standardData).forEach(key => {
+        if (key === 'coordinates' && standardData[key]) {
+          finalPayload.append('coordinates', JSON.stringify(standardData[key]));
+        } else {
+          finalPayload.append(key, standardData[key]);
+        }
+      });
+    }
+
+    const response = await api.put(`/rooms/${id}`, finalPayload, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return roomToProperty(response.data);
   },
 

@@ -29,12 +29,17 @@ const createRoom = async (req, res) => {
       maxRenters,
     } = req.body;
 
+    let uploadedImages = [];
+    if (req.files && req.files.length > 0) {
+      uploadedImages = req.files.map(file => file.path);
+    }
+
     const room = await Room.create({
       title,
       description:
         description ||
         `${bedrooms || 1} bed, ${bathrooms || 1} bath property in ${location}`,
-      images: images || (image ? [image] : []),
+     images: uploadedImages, 
       videos,
       features:
         features ||
@@ -49,13 +54,16 @@ const createRoom = async (req, res) => {
       bedrooms,
       bathrooms,
       area,
-      image: image || "🏠",
+      image: uploadedImages.length > 0 ? uploadedImages[0] : "🏠",
       createdBy: req.user._id,
       maxRenters: maxRenters ? Math.max(1, parseInt(maxRenters, 10)) : 1,
     });
 
     res.status(201).json(room);
-  } catch (error) {
+ } catch (error) {
+    console.error("🔴 BACKEND UPLOAD ERROR DETAILS:");
+    console.error(error); // This prints the entire error object/stack trace without wrapping it as an object string
+    // ─────────────────────────────────────────────────────────────────
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -133,6 +141,12 @@ const updateRoom = async (req, res) => {
 
     if (room.createdBy && room.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized to update this room" });
+    }
+    if (req.files && req.files.length > 0) {
+      const newImages = req.files.map(file => file.path);
+      // Option A: Replace images completely with new uploads:
+      room.images = newImages;
+      room.image = newImages[0]; // update main thumbnail
     }
 
     room.title = title || room.title;

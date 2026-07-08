@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middlewares/authMiddleware");
+const { upload } = require("../config/cloudinary");
 
 const {
   createRoom,
@@ -12,19 +13,34 @@ const {
 } = require("../controllers/roomController");
 
 const { cancelRent, getRentalStatus } = require("../controllers/rentalController");
-
 const { applyForRoom, getApplicationsByRoom, getApprovedRenters } = require("../controllers/applicationController");
-
-// Legacy room-based group chat — MUST be registered (was imported but not mounted before)
 const { getMessages, sendGroupMessage } = require("../controllers/groupChatController_legacy");
 
+// Custom wrapper to intercept and safely isolate Multer errors
+const handleUploadMiddleware = (req, res, next) => {
+  const uploadProcessor = upload.array('images', 5);
+  
+  uploadProcessor(req, res, (err) => {
+    if (err) {
+      console.error("🔴 MULTER INTERCEPT ERROR:", err.message);
+      return res.status(400).json({ 
+        message: `Image upload streaming failed: ${err.message}`, 
+        error: err.message 
+      });
+    }
+    next();
+  });
+};
 
 // ── Room CRUD ────────────────────────────────────────────────────────────────
 router.get("/", getAllRooms);
 router.get("/mine", protect, getMyRooms);
 router.get("/:id", getRoomById);
-router.post("/", protect, createRoom);
-router.put("/:id", protect, updateRoom);
+
+// Wrapped upload middlewares to seamlessly handle file parsing streams
+router.post("/", protect, handleUploadMiddleware, createRoom);
+router.put("/:id", protect, handleUploadMiddleware, updateRoom);
+
 router.delete("/:id", protect, deleteRoom);
 
 // ── Application routes (scoped to room) ─────────────────────────────────────
