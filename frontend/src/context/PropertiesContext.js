@@ -15,6 +15,7 @@ export const PropertiesProvider = ({ children }) => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [latestSearchFilters, setLatestSearchFilters] = useState(null);
 
   // Load all public listings on mount (browse page)
   useEffect(() => {
@@ -37,7 +38,16 @@ export const PropertiesProvider = ({ children }) => {
   };
 
   return (
-    <PropertiesContext.Provider value={{ properties, loadProperties, loading, error }}>
+    <PropertiesContext.Provider
+      value={{
+        properties,
+        loadProperties,
+        loading,
+        error,
+        latestSearchFilters,
+        setLatestSearchFilters,
+      }}
+    >
       {children}
     </PropertiesContext.Provider>
   );

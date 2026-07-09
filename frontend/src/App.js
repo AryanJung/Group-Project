@@ -6,6 +6,7 @@ import Header from './components/Header/Header';
 import { useAuth } from './context/AuthContext';
 import { appealsAPI } from './services/api';
 import Home from './pages/Home/Home';
+import PropertiesPage from './pages/Properties/PropertiesPage';
 import Admin from './pages/Admin/Admin';
 import PropertyDetail from './pages/PropertyDetail/PropertyDetail';
 import Chat from './pages/Chat/Chat';
@@ -60,6 +61,7 @@ function AppContent() {
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/chat/:id" element={<Chat />} />

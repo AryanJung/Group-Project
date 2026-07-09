@@ -68,6 +68,8 @@ const roomToProperty = (room) => ({
   createdBy: room.createdBy || null,
   isRented: room.isRented ?? false,
   maxRenters: room.maxRenters ?? 1,
+  createdAt: room.createdAt || null,
+  updatedAt: room.updatedAt || null,
 });
 
 const propertyToRoom = (property) => ({
