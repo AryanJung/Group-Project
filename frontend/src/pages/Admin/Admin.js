@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { adminAPI, rentalAPI, applicationAPI, groupChatAPI } from '../../services/api';
+import { adminAPI, rentalAPI, applicationAPI } from '../../services/api';
 import { needsKycVerification } from '../../utils/kyc';
 import MapPicker from './MapPicker';
 import './Admin.css';
@@ -16,9 +16,6 @@ const Admin = () => {
   const [applicationsRoomId, setApplicationsRoomId] = useState(null);
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
-  const [groupChatCreating, setGroupChatCreating] = useState(false);
-  const [groupChatName, setGroupChatName] = useState('');
-  const [groupChatMsg, setGroupChatMsg] = useState('');
 
   // Owner's own listings
   const [myRooms, setMyRooms] = useState([]);
@@ -447,11 +444,15 @@ const Admin = () => {
                           {property.image && property.image !== '🏠' ? (
                             <img src={property.image} alt={property.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
                           ) : (
-                            <span className="property-card-icon" aria-hidden="true">
-                              <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                              </svg>
-                            </span>
+                            property.image ? (
+                              <img src={property.image} alt={property.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                            ) : (
+                              <span className="property-card-icon" aria-hidden="true">
+                                <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                                  <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                                </svg>
+                              </span>
+                            )
                           )}
                         </div>
                         <div className="admin-property-content">
@@ -550,7 +551,7 @@ const Admin = () => {
                                     setApplications((prev) =>
                                       prev.map((a) => a._id === app._id ? { ...a, status: 'accepted' } : a)
                                     );
-                                  } catch (e) { setGroupChatMsg(e.response?.data?.message || 'Failed to accept'); }
+                                  } catch (e) { setFormError(e.response?.data?.message || 'Failed to accept'); }
                                 }}
                               >
                                 Accept
@@ -563,7 +564,7 @@ const Admin = () => {
                                     setApplications((prev) =>
                                       prev.map((a) => a._id === app._id ? { ...a, status: 'rejected' } : a)
                                     );
-                                  } catch (e) { setGroupChatMsg(e.response?.data?.message || 'Failed to reject'); }
+                                  } catch (e) { setFormError(e.response?.data?.message || 'Failed to reject'); }
                                 }}
                               >
                                 Reject
@@ -586,79 +587,6 @@ const Admin = () => {
                 )}
               </div>
 
-              {/* Group Chat creation */}
-              {applicationsRoomId && (
-                <div style={{ borderTop: '1px solid #e5e7eb', padding: '1.25rem', background: '#f9fafb' }}>
-                  <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', marginBottom: '0.75rem' }}>
-                    Create Group Chat for this listing
-                  </p>
-                  {groupChatMsg && (
-                    <p style={{ fontSize: '0.82rem', color: groupChatMsg.toLowerCase().includes('failed') ? '#b91c1c' : '#15803d', marginBottom: '0.5rem' }}>
-                      {groupChatMsg}
-                    </p>
-                  )}
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <input
-                      type="text"
-                      placeholder="Chat name (e.g. Flat 3B Tenants)"
-                      value={groupChatName}
-                      onChange={(e) => setGroupChatName(e.target.value)}
-                      style={{ flex: 1, minWidth: '180px', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.85rem' }}
-                    />
-                    <button
-                      disabled={groupChatCreating || !groupChatName.trim()}
-                      onClick={async () => {
-                        setGroupChatCreating(true);
-                        setGroupChatMsg('');
-                        try {
-                          const acceptedRenterIds = applications
-                            .filter((a) => a.status === 'accepted')
-                            .map((a) => a.applicant?._id || a.applicant)
-                            .filter(Boolean);
-
-                          const newChat = await groupChatAPI.create(
-                            groupChatName.trim(),
-                            applicationsRoomId,
-                            acceptedRenterIds
-                          );
-                          setGroupChatMsg('Chat created! Redirecting...');
-                          const roomId = newChat.room?._id || newChat.room;
-                          setTimeout(() => navigate(`/chat/${roomId}`), 800);
-                        } catch (e) {
-                          const errMsg = e.response?.data?.message || 'Failed to create chat.';
-                          if (errMsg.toLowerCase().includes('already') || e.response?.status === 409) {
-                            setGroupChatMsg('Chat already exists. Opening it...');
-                            setTimeout(() => navigate(`/chat/${applicationsRoomId}`), 800);
-                          } else {
-                            setGroupChatMsg(errMsg);
-                          }
-                        } finally {
-                          setGroupChatCreating(false);
-                        }
-                      }}
-                      style={{
-                        background: groupChatCreating || !groupChatName.trim() ? '#d1d5db' : '#7C3AED',
-                        color: '#fff', border: 'none', padding: '0.5rem 1.1rem',
-                        borderRadius: '8px', fontWeight: 600, fontSize: '0.82rem',
-                        cursor: groupChatCreating || !groupChatName.trim() ? 'not-allowed' : 'pointer',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {groupChatCreating ? 'Creating...' : 'Create and Add All Renters'}
-                    </button>
-                    <button
-                      onClick={() => navigate(`/chat/${applicationsRoomId}`)}
-                      style={{
-                        background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db',
-                        padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600,
-                        fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Open Existing Chat
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

@@ -66,7 +66,8 @@ const Chat = () => {
   const [sendError, setSendError] = useState('');
   const [memberActionLoading, setMemberActionLoading] = useState('');
 
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const shouldAutoScrollRef = useRef(true);
   const pollTimerRef = useRef(null);
   const chatIdRef = useRef(null);
   const inputRef = useRef(null);
@@ -94,9 +95,32 @@ const Chat = () => {
       .slice(0, 50);
   }, [allUsers, memberIds, user, userSearch]);
 
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (shouldAutoScrollRef.current) {
+      scrollToBottom(messages.length <= 1 ? 'auto' : 'smooth');
+    }
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    if (status === true) {
+      shouldAutoScrollRef.current = true;
+      scrollToBottom('auto');
+    }
+  }, [status, chat?._id, scrollToBottom]);
+
+  const handleMessagesScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 80;
+  };
 
   useEffect(() => {
     inputRef.current?.style.setProperty('height', 'auto');
@@ -211,10 +235,12 @@ const Chat = () => {
     setNewMessage('');
     setSendError('');
     setIsSending(true);
+    shouldAutoScrollRef.current = true;
 
     try {
       const saved = await groupChatAPI.sendMessage(chatIdRef.current, text);
       setMessages((prev) => [...prev, saved]);
+      scrollToBottom('smooth');
     } catch (err) {
       setSendError(err.response?.data?.message || 'Failed to send message. Please try again.');
       setNewMessage(text);
@@ -381,36 +407,44 @@ const Chat = () => {
               <h2>Unable to open chat</h2>
               <p>{statusError || 'Select a conversation to start messaging'}</p>
             </div>
-          ) : messages.length === 0 ? (
-            <div className="chat-empty-state">
-              <EmptyConversationIcon />
-              <h2>Select a conversation to start messaging</h2>
-              <p>This group is ready. Send the first update when you are ready.</p>
-            </div>
           ) : (
-            <div className="chat-messages" aria-live="polite">
-              {messageRows.map((item) => {
-                if (item.type === 'date') {
-                  return <div key={item.key} className="chat-date-divider"><span>{item.label}</span></div>;
-                }
+            <>
+              {messages.length === 0 ? (
+                <div className="chat-empty-state">
+                  <EmptyConversationIcon />
+                  <h2>Select a conversation to start messaging</h2>
+                  <p>This group is ready. Send the first update when you are ready.</p>
+                </div>
+              ) : (
+                <div
+                  className="chat-messages"
+                  ref={messagesContainerRef}
+                  onScroll={handleMessagesScroll}
+                  aria-live="polite"
+                >
+                  {messageRows.map((item) => {
+                    if (item.type === 'date') {
+                      return <div key={item.key} className="chat-date-divider"><span>{item.label}</span></div>;
+                    }
 
-                const msg = item.data;
-                const isMe = msg.sender?._id === user?._id || msg.sender === user?._id;
-                const senderName = msg.sender?.name || 'Unknown';
+                    const msg = item.data;
+                    const isMe = msg.sender?._id === user?._id || msg.sender === user?._id;
+                    const senderName = msg.sender?.name || 'Unknown';
 
-                return (
-                  <div key={item.key} className={`message-row ${isMe ? 'message-row--own' : 'message-row--other'}`}>
-                    {!isMe && <div className="message-avatar" aria-hidden="true">{initialsFor(senderName)}</div>}
-                    <div className={`message-bubble ${isMe ? 'message-bubble--own' : 'message-bubble--other'}`}>
-                      {!isMe && <span className="message-sender-name">{senderName}</span>}
-                      <p>{msg.text}</p>
-                      <span className="message-time">{formatTime(msg.createdAt)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
+                    return (
+                      <div key={item.key} className={`message-row ${isMe ? 'message-row--own' : 'message-row--other'}`}>
+                        {!isMe && <div className="message-avatar" aria-hidden="true">{initialsFor(senderName)}</div>}
+                        <div className={`message-bubble ${isMe ? 'message-bubble--own' : 'message-bubble--other'}`}>
+                          {!isMe && <span className="message-sender-name">{senderName}</span>}
+                          <p>{msg.text}</p>
+                          <span className="message-time">{formatTime(msg.createdAt)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
 
           {sendError && <div className="chat-send-error" role="alert">{sendError}</div>}
@@ -449,99 +483,101 @@ const Chat = () => {
                 </div>
                 <button type="button" className="chat-icon-btn" onClick={() => setGroupPanelOpen(false)} aria-label="Close group panel">x</button>
               </div>
-              {toast && <p className="group-toast">{toast}</p>}
-              {isOwner && (
-                <section className="group-user-picker" aria-label="Add users to group">
-                  <div className="group-user-picker-header">
-                    <div>
-                      <h3>Add users</h3>
-                      <p>{allUsers.length} total users</p>
+              <div className="group-panel-body">
+                {toast && <p className="group-toast">{toast}</p>}
+                {isOwner && (
+                  <section className="group-user-picker" aria-label="Add users to group">
+                    <div className="group-user-picker-header">
+                      <div>
+                        <h3>Add users</h3>
+                        <p>{allUsers.length} total users</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="group-add-btn"
+                        onClick={handleAddSelectedMembers}
+                        disabled={memberActionLoading === 'selected' || selectedUserIds.length === 0}
+                      >
+                        {memberActionLoading === 'selected'
+                          ? 'Adding...'
+                          : `Add Selected${selectedUserIds.length ? ` (${selectedUserIds.length})` : ''}`}
+                      </button>
+                    </div>
+                    <input
+                      className="group-user-search"
+                      type="search"
+                      placeholder="Search by username"
+                      value={userSearch}
+                      onChange={(event) => setUserSearch(event.target.value)}
+                    />
+                    <div className="group-user-list">
+                      {usersLoading ? (
+                        <p className="group-user-empty">Loading users...</p>
+                      ) : availableUsers.length === 0 ? (
+                        <p className="group-user-empty">No users available to add.</p>
+                      ) : (
+                        availableUsers.map((candidate) => {
+                          const candidateId = String(candidate._id || candidate.id);
+                          const checked = selectedUserIds.includes(candidateId);
+                          const username = candidate.username || candidate.name || candidate.email;
+
+                          return (
+                            <label className="group-user-option" key={candidateId}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  setSelectedUserIds((prev) =>
+                                    checked
+                                      ? prev.filter((item) => item !== candidateId)
+                                      : [...prev, candidateId]
+                                  )
+                                }
+                              />
+                              <span className="group-member-avatar">{initialsFor(candidate.name || username)}</span>
+                              <span>
+                                <strong>@{username}</strong>
+                                <small>{candidate.name || candidate.email || 'User'}</small>
+                              </span>
+                            </label>
+                          );
+                        })
+                      )}
                     </div>
                     <button
                       type="button"
-                      className="group-add-btn"
-                      onClick={handleAddSelectedMembers}
-                      disabled={memberActionLoading === 'selected' || selectedUserIds.length === 0}
+                      className="group-add-secondary"
+                      onClick={handleAddAllMembers}
+                      disabled={memberActionLoading === 'add'}
                     >
-                      {memberActionLoading === 'selected'
-                        ? 'Adding...'
-                        : `Add Selected${selectedUserIds.length ? ` (${selectedUserIds.length})` : ''}`}
+                      {memberActionLoading === 'add' ? 'Adding...' : 'Add approved renters'}
                     </button>
-                  </div>
-                  <input
-                    className="group-user-search"
-                    type="search"
-                    placeholder="Search by username"
-                    value={userSearch}
-                    onChange={(event) => setUserSearch(event.target.value)}
-                  />
-                  <div className="group-user-list">
-                    {usersLoading ? (
-                      <p className="group-user-empty">Loading users...</p>
-                    ) : availableUsers.length === 0 ? (
-                      <p className="group-user-empty">No users available to add.</p>
-                    ) : (
-                      availableUsers.map((candidate) => {
-                        const candidateId = String(candidate._id || candidate.id);
-                        const checked = selectedUserIds.includes(candidateId);
-                        const username = candidate.username || candidate.name || candidate.email;
-
-                        return (
-                          <label className="group-user-option" key={candidateId}>
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() =>
-                                setSelectedUserIds((prev) =>
-                                  checked
-                                    ? prev.filter((item) => item !== candidateId)
-                                    : [...prev, candidateId]
-                                )
-                              }
-                            />
-                            <span className="group-member-avatar">{initialsFor(candidate.name || username)}</span>
-                            <span>
-                              <strong>@{username}</strong>
-                              <small>{candidate.name || candidate.email || 'User'}</small>
-                            </span>
-                          </label>
-                        );
-                      })
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="group-add-secondary"
-                    onClick={handleAddAllMembers}
-                    disabled={memberActionLoading === 'add'}
-                  >
-                    {memberActionLoading === 'add' ? 'Adding...' : 'Add approved renters'}
-                  </button>
-                </section>
-              )}
-              <ul className="group-member-list">
-                {(chat?.members || []).map((member) => {
-                  const memberId = member._id || member;
-                  const isCurrentUser = memberId === user?._id;
-                  const memberName = member.name || member.username || 'Group member';
-                  return (
-                    <li key={memberId}>
-                      <span className="group-member-avatar">{initialsFor(memberName)}</span>
-                      <span>
-                        <strong>{memberName}</strong>
-                        <small>{member.username ? `@${member.username}` : member.email || (isCurrentUser ? 'You' : 'Member')}</small>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(memberId)}
-                        disabled={!isOwner || isCurrentUser || memberActionLoading === memberId}
-                      >
-                        {memberActionLoading === memberId ? 'Removing...' : 'Remove'}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                  </section>
+                )}
+                <ul className="group-member-list">
+                  {(chat?.members || []).map((member) => {
+                    const memberId = member._id || member;
+                    const isCurrentUser = memberId === user?._id;
+                    const memberName = member.name || member.username || 'Group member';
+                    return (
+                      <li key={memberId}>
+                        <span className="group-member-avatar">{initialsFor(memberName)}</span>
+                        <span>
+                          <strong>{memberName}</strong>
+                          <small>{member.username ? `@${member.username}` : member.email || (isCurrentUser ? 'You' : 'Member')}</small>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(memberId)}
+                          disabled={!isOwner || isCurrentUser || memberActionLoading === memberId}
+                        >
+                          {memberActionLoading === memberId ? 'Removing...' : 'Remove'}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </aside>
           </div>
         )}

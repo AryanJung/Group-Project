@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { groupChatAPI } from '../../services/api';
+import CreateGroupChatModal from '../../components/CreateGroupChatModal/CreateGroupChatModal';
 import './MyChats.css';
 
 const MyChats = () => {
@@ -10,18 +11,24 @@ const MyChats = () => {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  useEffect(() => {
+  const loadChats = () => {
     if (!user?.token) {
       navigate('/', { replace: true });
       return;
     }
 
+    setLoading(true);
     groupChatAPI
       .getMine()
       .then((data) => setChats(data))
       .catch(() => setError('Failed to load your chats. Please try again.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadChats();
   }, [user, navigate]);
 
   if (loading) {
@@ -41,10 +48,17 @@ const MyChats = () => {
     <div className="my-chats-page">
       <div className="my-chats-container">
         <header className="my-chats-header">
-          <h1>My Chats</h1>
-          <p className="my-chats-subtitle">
-            Group conversations for properties you own or rent
-          </p>
+          <div className="my-chats-header-row">
+            <div>
+              <h1>My Chats</h1>
+              <p className="my-chats-subtitle">
+                Group conversations for properties you own or rent
+              </p>
+            </div>
+            <button type="button" className="my-chats-create-btn" onClick={() => setCreateModalOpen(true)}>
+              + Create Group Chat
+            </button>
+          </div>
         </header>
 
         {error && (
@@ -66,6 +80,9 @@ const MyChats = () => {
             </p>
             <button type="button" className="my-chats-browse-btn" onClick={() => navigate('/')}>
               Browse Properties
+            </button>
+            <button type="button" className="my-chats-create-btn my-chats-create-btn--secondary" onClick={() => setCreateModalOpen(true)}>
+              + Create Group Chat
             </button>
           </div>
         )}
@@ -119,6 +136,15 @@ const MyChats = () => {
           </ul>
         )}
       </div>
+
+      <CreateGroupChatModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={() => {
+          setCreateModalOpen(false);
+          loadChats();
+        }}
+      />
     </div>
   );
 };

@@ -15,6 +15,28 @@
   margin-bottom: 1.75rem;
 }
 
+.my-chats-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.my-chats-create-btn {
+  flex-shrink: 0;
+  padding: 0.65rem 1rem;
+  background: #051747;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.my-chats-create-btn--secondary {
+  margin-top: 0.25rem;
+}
+
 .my-chats-header h1 {
   font-size: 1.75rem;
   font-weight: 700;

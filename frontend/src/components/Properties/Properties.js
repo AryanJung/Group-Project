@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProperties } from '../../context/PropertiesContext';
+import { getPropertyImages } from '../../utils/propertyHelpers';
 import './Properties.css';
 
 const Properties = () => {
@@ -236,35 +237,43 @@ const Properties = () => {
         {/* Properties Grid */}
         {filteredProperties.length > 0 ? (
           <div className="properties-grid">
-            {filteredProperties.map((property) => (
-              <div key={property.id || property._id} className="property-card">
-                <div className="property-image">
-                  <span className="property-card-icon" aria-hidden="true">
-                    <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
-                      <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                </div>
-                <div className="property-content">
-                  <h3 className="property-title">{property.title}</h3>
-                  <p className="property-location">{property.location}</p>
-                  <div className="property-details">
-                    <span>{property.bedrooms} Bed</span>
-                    <span>{property.bathrooms} Bath</span>
-                    <span>{property.area}</span>
+            {filteredProperties.map((property) => {
+              const [primaryImage] = getPropertyImages(property);
+
+              return (
+                <div key={property.id || property._id} className="property-card">
+                  <div className={`property-image ${primaryImage ? 'property-image--photo' : ''}`}>
+                    {primaryImage ? (
+                      <img src={primaryImage} alt={property.title || 'Property'} loading="lazy" />
+                    ) : (
+                      <span className="property-card-icon" aria-hidden="true">
+                        <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                          <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
                   </div>
-                  <div className="property-footer">
-                    <span className="property-price">{property.price}</span>
-                    <button
-                      className="btn-view"
-                      onClick={() => handleViewDetails(property.id || property._id)}
-                    >
-                      View Details
-                    </button>
+                  <div className="property-content">
+                    <h3 className="property-title">{property.title}</h3>
+                    <p className="property-location">{property.location}</p>
+                    <div className="property-details">
+                      <span>{property.bedrooms} Bed</span>
+                      <span>{property.bathrooms} Bath</span>
+                      <span>{property.area}</span>
+                    </div>
+                    <div className="property-footer">
+                      <span className="property-price">{property.price}</span>
+                      <button
+                        className="btn-view"
+                        onClick={() => handleViewDetails(property.id || property._id)}
+                      >
+                        View Details
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="no-results">
