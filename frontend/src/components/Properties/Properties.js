@@ -6,10 +6,14 @@ import FeaturedProperties from './FeaturedProperties';
 import './Properties.css';
 
 const Properties = () => {
-  const { properties } = useProperties();
+  const { properties, loadProperties } = useProperties();
   const navigate = useNavigate();
   const sectionRef = useRef(null);
   const [visibleCarouselIds, setVisibleCarouselIds] = useState([]);
+
+  useEffect(() => {
+    loadProperties();
+  }, [loadProperties]);
 
   // Scroll animation setup
   useEffect(() => {

@@ -26,6 +26,12 @@ const roomSchema = new mongoose.Schema(
 
     // True when acceptedRenters count has reached maxRenters (listing at capacity)
     isRented: { type: Boolean, default: false },
+    // Approval workflow for public visibility
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'approved',
+    },
   },
   { timestamps: true }
 );

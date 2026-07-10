@@ -31,7 +31,11 @@ const createRoom = async (req, res) => {
 
     let uploadedImages = [];
     if (req.files && req.files.length > 0) {
-      uploadedImages = req.files.map(file => file.path);
+      uploadedImages = req.files.map((file) => file.path);
+    }
+
+    if (uploadedImages.length === 0) {
+      return res.status(400).json({ message: 'Please upload at least one image of the property.' });
     }
 
     const room = await Room.create({
@@ -39,7 +43,7 @@ const createRoom = async (req, res) => {
       description:
         description ||
         `${bedrooms || 1} bed, ${bathrooms || 1} bath property in ${location}`,
-     images: uploadedImages, 
+      images: uploadedImages,
       videos,
       features:
         features ||
@@ -54,9 +58,10 @@ const createRoom = async (req, res) => {
       bedrooms,
       bathrooms,
       area,
-      image: uploadedImages.length > 0 ? uploadedImages[0] : "🏠",
+      image: uploadedImages.length > 0 ? uploadedImages[0] : '🏠',
       createdBy: req.user._id,
       maxRenters: maxRenters ? Math.max(1, parseInt(maxRenters, 10)) : 1,
+      status: 'pending',
     });
 
     res.status(201).json(room);
@@ -71,7 +76,12 @@ const createRoom = async (req, res) => {
 // Get all rooms (public — for browse page)
 const getAllRooms = async (req, res) => {
   try {
-    const rooms = await Room.find().populate("createdBy", "name email role");
+    const rooms = await Room.find({
+      $or: [
+        { status: 'approved' },
+        { status: { $exists: false } },
+      ],
+    }).populate('createdBy', 'name email role');
     res.status(200).json(rooms);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -103,6 +113,18 @@ const getRoomById = async (req, res) => {
 
     if (!room) {
       return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Only show pending / rejected rooms to the owner or admin; public users can only see approved listings.
+    if (room.status && room.status !== 'approved') {
+      const currentUser = req.user;
+      const isOwner = currentUser && room.createdBy && room.createdBy._id
+        ? room.createdBy._id.toString() === currentUser._id.toString()
+        : currentUser && room.createdBy && room.createdBy.toString() === currentUser._id.toString();
+      const isAdmin = currentUser && ['admin', 'superadmin'].includes(currentUser.role);
+      if (!isOwner && !isAdmin) {
+        return res.status(404).json({ message: 'Room not found' });
+      }
     }
 
     res.status(200).json(room);
@@ -143,10 +165,14 @@ const updateRoom = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to update this room" });
     }
     if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => file.path);
+      const newImages = req.files.map((file) => file.path);
       // Option A: Replace images completely with new uploads:
       room.images = newImages;
       room.image = newImages[0]; // update main thumbnail
+    }
+
+    if ((!room.images || room.images.length === 0) && room.image === '🏠' && (!req.files || req.files.length === 0)) {
+      return res.status(400).json({ message: 'Please upload at least one image of the property.' });
     }
 
     room.title = title || room.title;

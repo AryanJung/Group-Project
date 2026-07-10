@@ -158,6 +158,16 @@ const Admin = () => {
       return;
     }
 
+    const hasExistingImages = editingProperty && (editingProperty.images?.length > 0 || (editingProperty.image && editingProperty.image !== '🏠'));
+    if (!editingProperty && selectedFiles.length === 0) {
+      setFormError('Please upload at least one image of the property.');
+      return;
+    }
+    if (editingProperty && !hasExistingImages && selectedFiles.length === 0) {
+      setFormError('Please upload at least one image of the property.');
+      return;
+    }
+
     setSubmitting(true);
     setFormError('');
 
@@ -458,6 +468,26 @@ const Admin = () => {
                         <div className="admin-property-content">
                           <h3>{property.title}</h3>
                           <p className="property-location">{property.location}</p>
+                          {property.status && (
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                marginBottom: '0.5rem',
+                                padding: '0.25rem 0.65rem',
+                                borderRadius: '999px',
+                                fontSize: '0.73rem',
+                                fontWeight: 700,
+                                color: property.status === 'approved' ? '#115e59' : property.status === 'rejected' ? '#b91c1c' : '#78350f',
+                                background: property.status === 'approved' ? '#d1fae5' : property.status === 'rejected' ? '#fee2e2' : '#fef3c7',
+                              }}
+                            >
+                              {property.status === 'approved'
+                                ? 'Approved'
+                                : property.status === 'rejected'
+                                ? 'Rejected'
+                                : 'Pending Approval'}
+                            </span>
+                          )}
                           <div className="property-details">
                             <span>{property.bedrooms} Bed</span>
                             <span>{property.bathrooms} Bath</span>

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { adminAPI } from '../services/api';
 
 const PropertiesContext = createContext();
@@ -17,12 +17,7 @@ export const PropertiesProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [latestSearchFilters, setLatestSearchFilters] = useState(null);
 
-  // Load all public listings on mount (browse page)
-  useEffect(() => {
-    loadProperties();
-  }, []);
-
-  const loadProperties = async () => {
+  const loadProperties = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -35,7 +30,12 @@ export const PropertiesProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Load all public listings on mount (browse page)
+  useEffect(() => {
+    loadProperties();
+  }, [loadProperties]);
 
   return (
     <PropertiesContext.Provider

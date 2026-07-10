@@ -41,7 +41,7 @@ const sortProperties = (properties, sortBy) => {
 };
 
 const PropertyBrowser = () => {
-  const { properties, latestSearchFilters, setLatestSearchFilters } = useProperties();
+  const { properties, latestSearchFilters, setLatestSearchFilters, loadProperties } = useProperties();
   const navigate = useNavigate();
   const sectionRef = useRef(null);
 
@@ -53,6 +53,10 @@ const PropertyBrowser = () => {
   const [bathroomsFilter, setBathroomsFilter] = useState(latestSearchFilters?.bathroomsFilter || '');
   const [sortBy, setSortBy] = useState(latestSearchFilters?.sortBy || 'newest');
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    loadProperties();
+  }, [loadProperties]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

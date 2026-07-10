@@ -4,7 +4,7 @@ import { adminAPI, applicationAPI, groupChatAPI } from '../../services/api';
 import './CreateGroupChatModal.css';
 
 const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
-  const { isOwner, user } = useAuth();
+  const { isOwner } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [groupName, setGroupName] = useState('');
@@ -16,12 +16,16 @@ const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setError('');
+      setUsers([]);
+      setSelectedUserIds([]);
+      setSearch('');
+      setSelectedRoomId('');
+      return;
+    }
 
     setError('');
-    setGroupName('');
-    setSelectedUserIds([]);
-    setSearch('');
     setLoading(true);
 
     adminAPI
@@ -29,7 +33,7 @@ const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
       .then((data) => {
         setRooms(data || []);
         if (data?.length) {
-          setSelectedRoomId(String(data[0]._id || data[0].id));
+          setSelectedRoomId((prev) => prev || String(data[0]._id || data[0].id));
         } else {
           setSelectedRoomId('');
         }

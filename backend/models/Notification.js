@@ -10,7 +10,17 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["new_application", "application_accepted", "application_rejected"],
+      enum: [
+        "new_application",
+        "application_accepted",
+        "application_rejected",
+        "kyc_approved",
+        "kyc_rejected",
+        "property_approved",
+        "property_rejected",
+        "account_banned",
+        "account_unbanned",
+      ],
       required: true,
     },
     application: {

@@ -66,6 +66,8 @@ const Chat = () => {
   const [sendError, setSendError] = useState('');
   const [memberActionLoading, setMemberActionLoading] = useState('');
 
+  const canManageMembers = Boolean(user?.token) && (user?.role === 'owner' || user?.role === 'superadmin' || user?.role === 'admin');
+
   const messagesContainerRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
   const pollTimerRef = useRef(null);
@@ -192,7 +194,7 @@ const Chat = () => {
   }, [refreshChat]);
 
   useEffect(() => {
-    if (!groupPanelOpen || !isOwner) return;
+    if (!groupPanelOpen || !canManageMembers || !isOwner) return;
 
     setUsersLoading(true);
     userAPI
@@ -200,7 +202,7 @@ const Chat = () => {
       .then((users) => setAllUsers(users))
       .catch(() => setToast('Unable to load users right now.'))
       .finally(() => setUsersLoading(false));
-  }, [groupPanelOpen, isOwner]);
+  }, [groupPanelOpen, canManageMembers, isOwner]);
 
   const groupedChats = useMemo(() => {
     const groups = { Today: [], Yesterday: [], Older: [] };
@@ -485,7 +487,7 @@ const Chat = () => {
               </div>
               <div className="group-panel-body">
                 {toast && <p className="group-toast">{toast}</p>}
-                {isOwner && (
+                {canManageMembers && isOwner && (
                   <section className="group-user-picker" aria-label="Add users to group">
                     <div className="group-user-picker-header">
                       <div>

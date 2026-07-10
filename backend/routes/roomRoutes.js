@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middlewares/authMiddleware");
+const attachUserIfPresent = require("../middlewares/optionalAuthMiddleware");
 const { upload } = require("../config/cloudinary");
 
 const {
@@ -35,7 +36,7 @@ const handleUploadMiddleware = (req, res, next) => {
 // ── Room CRUD ────────────────────────────────────────────────────────────────
 router.get("/", getAllRooms);
 router.get("/mine", protect, getMyRooms);
-router.get("/:id", getRoomById);
+router.get("/:id", attachUserIfPresent, getRoomById);
 
 // Wrapped upload middlewares to seamlessly handle file parsing streams
 router.post("/", protect, handleUploadMiddleware, createRoom);
