@@ -98,3 +98,14 @@
   }
 }
 
+.about-img {
+  width: 300px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.logo-img {
+  height: 47px;   /* Adjust as needed */
+  width: auto;
+  display: block;
+}
