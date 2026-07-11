@@ -19,6 +19,17 @@ const MAX_HISTORY_PAIRS = 5;
 // Max number of matching listings to pull from the DB and show per search.
 const MAX_LISTINGS = 5;
 
+// When an exact-price search finds nothing, widen to this band around the
+// requested price (e.g. 12000 → 10800–13200) so "costing exactly 12k" still
+// surfaces close matches instead of a bare "no results".
+const PRICE_TOLERANCE = 0.1;
+
+// Fields pulled for each listing: enough for the comparison table (price,
+// location, beds, baths, area) plus description/features/rating so the model
+// can write a richer comparison.
+const LISTING_FIELDS =
+  "title description features rating price location bedrooms bathrooms images image area maxRenters";
+
 const SYSTEM_PROMPT =
   "You are a helpful assistant for a room and flat renting platform in Nepal. " +
   "You help users find rooms, understand rental processes, and platform features. " +
@@ -107,6 +118,18 @@ const extractSearchFilters = (message) => {
     "(?:above|over|more than|at least|min(?:imum)?|starting from)"
   );
 
+  // Exact/approx price, e.g. "costing exactly 12k", "priced at 8000",
+  // "around 15000". Only meaningful when the user didn't give a range, so we
+  // skip it if a min/max was already captured. The search then tries an exact
+  // price match first and falls back to a ±10% band (see chat()).
+  const exactPrice =
+    maxPrice == null && minPrice == null
+      ? extractPrice(
+          message,
+          "(?:exactly|cost(?:s|ing)?|priced at|price of|equal to|around|about|roughly|approx(?:imately)?|=|@)"
+        )
+      : null;
+
   const bedroomMatch = message.match(/(\d+)\s*[- ]?(?:bhk|bed ?rooms?|beds?)/i);
   const bedrooms = bedroomMatch ? parseInt(bedroomMatch[1], 10) : null;
 
@@ -123,14 +146,16 @@ const extractSearchFilters = (message) => {
   // up constantly in ordinary rental Q&A ("what documents do I need to rent
   // a room?") and caused false-positive searches when included here.
   const hasIntentVerb =
-    /\b(find|search|show me|looking for|recommend|suggest|browse|list)\b/i.test(
+    /\b(find|search|show me|look(?:ing)? for|recommend|suggest|browse|list|get me)\b/i.test(
       message
     );
 
-  const hasFilters = Boolean(maxPrice || minPrice || location || bedrooms);
+  const hasFilters = Boolean(
+    maxPrice || minPrice || exactPrice || location || bedrooms
+  );
   const shouldSearch = hasFilters || (hasListingKeyword && hasIntentVerb);
 
-  return { maxPrice, minPrice, bedrooms, location, shouldSearch };
+  return { maxPrice, minPrice, exactPrice, bedrooms, location, shouldSearch };
 };
 
 const buildRoomQuery = (filters) => {
@@ -140,6 +165,8 @@ const buildRoomQuery = (filters) => {
     query.price = {};
     if (filters.maxPrice != null) query.price.$lte = filters.maxPrice;
     if (filters.minPrice != null) query.price.$gte = filters.minPrice;
+  } else if (filters.exactPrice != null) {
+    query.price = filters.exactPrice;
   }
 
   if (filters.location) {
@@ -247,9 +274,20 @@ const chat = async (req, res) => {
       listings = await Room.find(buildRoomQuery(filters))
         .sort({ price: 1 })
         .limit(MAX_LISTINGS)
-        .select(
-          "title description features rating price location bedrooms bathrooms images image area maxRenters"
-        );
+        .select(LISTING_FIELDS);
+
+      // Exact-price request found nothing → retry within a ±10% band so a
+      // close listing still shows up instead of an empty result.
+      if (listings.length === 0 && filters.exactPrice != null) {
+        const lo = Math.round(filters.exactPrice * (1 - PRICE_TOLERANCE));
+        const hi = Math.round(filters.exactPrice * (1 + PRICE_TOLERANCE));
+        listings = await Room.find(
+          buildRoomQuery({ ...filters, exactPrice: null, minPrice: lo, maxPrice: hi })
+        )
+          .sort({ price: 1 })
+          .limit(MAX_LISTINGS)
+          .select(LISTING_FIELDS);
+      }
     } catch (dbErr) {
       console.error("Room search error:", dbErr);
     }
