@@ -11,22 +11,11 @@ const WELCOME = {
   ts: new Date(),
 };
 
-const MOCK_RECOMMENDATIONS = [
-  { id: 1, title: 'Sunny 2BHK near Ring Road', price: 'Rs 28,000/mo', image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=500&q=80' },
-  { id: 2, title: 'Compact Studio in Lalitpur', price: 'Rs 16,500/mo', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=500&q=80' },
-  { id: 3, title: 'Family Flat with Parking', price: 'Rs 35,000/mo', image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=500&q=80' },
-  { id: 4, title: 'Quiet Room near Campus', price: 'Rs 11,000/mo', image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=500&q=80' },
-];
-
-const getShuffledRecommendations = () =>
-  [...MOCK_RECOMMENDATIONS].sort(() => Math.random() - 0.5).slice(0, 3);
-
 const ChatbotWidget = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([WELCOME]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState(() => getShuffledRecommendations());
   const historyRef = useRef([]);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -107,27 +96,6 @@ const ChatbotWidget = () => {
               x
             </button>
           </div>
-
-          <section className="cw-recommendations" aria-label="Recommended properties">
-            <div className="cw-rec-header">
-              <p>Recommended Properties</p>
-              <button type="button" onClick={() => setRecommendations(getShuffledRecommendations())}>
-                Refresh Suggestions
-              </button>
-            </div>
-            <div className="cw-rec-grid">
-              {recommendations.map((property) => (
-                <article className="cw-rec-card" key={property.id}>
-                  <img src={property.image} alt="" />
-                  <div>
-                    <span>AI Match</span>
-                    <h3>{property.title}</h3>
-                    <p>{property.price}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
 
           <div className="cw-messages">
             {messages.map((m) => (
