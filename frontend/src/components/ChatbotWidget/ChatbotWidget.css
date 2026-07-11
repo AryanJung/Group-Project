@@ -248,6 +248,154 @@
   padding: 0 3px;
 }
 
+/* ── Real listing cards returned inline with a bot reply ── */
+.cw-msg-listings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.cw-msg-listing-card {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  text-decoration: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.cw-msg-listing-card:hover {
+  border-color: #f7931e;
+  transform: translateY(-1px);
+}
+
+.cw-msg-listing-card img {
+  width: 52px;
+  height: 52px;
+  border-radius: 7px;
+  object-fit: cover;
+  display: block;
+}
+
+.cw-msg-listing-fallback {
+  width: 52px;
+  height: 52px;
+  border-radius: 7px;
+  background: #fff7ed;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+.cw-msg-listing-card h4 {
+  margin: 0;
+  color: #111827;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.cw-msg-listing-location {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 10px;
+}
+
+.cw-msg-listing-price {
+  margin: 2px 0 0;
+  color: #f97316;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+/* ── Comparison table for multiple listing matches ── */
+.cw-compare-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 6px;
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.cw-compare-table {
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.cw-compare-table th,
+.cw-compare-table td {
+  padding: 6px 8px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cw-compare-table tbody tr:last-child th,
+.cw-compare-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cw-compare-label-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fafafa;
+  color: #6b7280;
+  font-weight: 700;
+  border-right: 1px solid #f0f0f0;
+}
+
+.cw-compare-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  text-decoration: none;
+  white-space: normal;
+}
+
+.cw-compare-head img {
+  width: 62px;
+  height: 46px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
+}
+
+.cw-compare-fallback {
+  width: 62px;
+  height: 46px;
+  border-radius: 6px;
+  background: #fff7ed;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.cw-compare-title {
+  color: #111827;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.cw-compare-price {
+  color: #f97316;
+  font-weight: 800;
+}
+
 /* ── Typing indicator ── */
 .cw-bubble--typing {
   display: flex;

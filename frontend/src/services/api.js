@@ -224,7 +224,10 @@ export const reviewAPI = {
 export const chatbotAPI = {
   sendMessage: async (message, history = []) => {
     const response = await api.post('/chat', { message, history });
-    return response.data.reply;
+    return {
+      reply: response.data.reply,
+      listings: response.data.listings || [],
+    };
   },
 };
 

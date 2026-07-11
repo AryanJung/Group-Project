@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { chatbotAPI } from '../../services/api';
+import { getPropertyImages } from '../../utils/propertyHelpers';
 import './ChatbotWidget.css';
 
 const WELCOME = {
@@ -51,7 +53,7 @@ const ChatbotWidget = () => {
     const snapshot = [...historyRef.current];
 
     try {
-      const reply = await chatbotAPI.sendMessage(text, snapshot);
+      const { reply, listings } = await chatbotAPI.sendMessage(text, snapshot);
       historyRef.current = [
         ...snapshot,
         { role: 'user', content: text },
@@ -59,7 +61,7 @@ const ChatbotWidget = () => {
       ];
       setMessages((prev) => [
         ...prev,
-        { id: Date.now() + 1, role: 'bot', text: reply, ts: new Date() },
+        { id: Date.now() + 1, role: 'bot', text: reply, listings, ts: new Date() },
       ]);
     } catch (err) {
       const errText =
@@ -76,6 +78,9 @@ const ChatbotWidget = () => {
 
   const fmt = (ts) =>
     ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const fmtPrice = (price) =>
+    typeof price === 'number' ? `Rs ${price.toLocaleString()}/mo` : price;
 
   return (
     <div className="cw-root">
@@ -135,6 +140,98 @@ const ChatbotWidget = () => {
                     </span>
                   ))}
                 </div>
+
+                {m.listings?.length > 1 && (
+                  <div className="cw-compare-wrap">
+                    <table className="cw-compare-table">
+                      <thead>
+                        <tr>
+                          <th className="cw-compare-label-col" />
+                          {m.listings.map((room) => {
+                            const [thumb] = getPropertyImages(room);
+                            return (
+                              <th key={room._id}>
+                                <Link to={`/property/${room._id}`} className="cw-compare-head">
+                                  {thumb ? (
+                                    <img src={thumb} alt="" />
+                                  ) : (
+                                    <span className="cw-compare-fallback">
+                                      {room.image || '🏠'}
+                                    </span>
+                                  )}
+                                  <span className="cw-compare-title">{room.title}</span>
+                                </Link>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <th className="cw-compare-label-col">Price</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id} className="cw-compare-price">
+                              {fmtPrice(room.price)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Location</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.location || '—'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Bedrooms</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.bedrooms ?? '—'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Bathrooms</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.bathrooms ?? '—'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Area</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.area && room.area !== 'N/A' ? room.area : '—'}</td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {m.listings?.length === 1 && (
+                  <div className="cw-msg-listings">
+                    {m.listings.map((room) => {
+                      const [thumb] = getPropertyImages(room);
+                      return (
+                        <Link
+                          to={`/property/${room._id}`}
+                          className="cw-msg-listing-card"
+                          key={room._id}
+                        >
+                          {thumb ? (
+                            <img src={thumb} alt="" />
+                          ) : (
+                            <span className="cw-msg-listing-fallback">
+                              {room.image || '🏠'}
+                            </span>
+                          )}
+                          <div>
+                            <h4>{room.title}</h4>
+                            <p className="cw-msg-listing-location">{room.location}</p>
+                            <p className="cw-msg-listing-price">{fmtPrice(room.price)}</p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <span className="cw-time">{fmt(m.ts)}</span>
               </div>
             ))}
