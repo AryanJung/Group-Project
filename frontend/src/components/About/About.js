@@ -1,5 +1,6 @@
 import React from 'react';
 import './About.css';
+import logo from '../logo.png';
 
 const About = () => {
   return (
@@ -25,7 +26,9 @@ const About = () => {
           </div>
           <div className="about-image">
             <div className="about-placeholder">
-              <span>🏘️</span>
+              <div className="about-image">
+  <img src={logo} alt="About" className="about-img" />
+</div>
             </div>
           </div>
         </div>
