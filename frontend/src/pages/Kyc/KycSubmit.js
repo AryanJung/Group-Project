@@ -4,16 +4,16 @@ import { kycAPI } from '../../services/api';
 import './KycSubmit.css';
 
 const KycSubmit = () => {
-  const { user, isAuthenticated } = useAuth();
-  // not using navigate here
+  const { user, isAuthenticated, register } = useAuth();
 
   const [role, setRole] = useState('user');
   const [details, setDetails] = useState('');
+  const [documentFile, setDocumentFile] = useState(null);
   const [docUrl, setDocUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [myKycs, setMyKycs] = useState([]);
-
-  const { register } = useAuth();
 
   useEffect(() => {
     // default role based on user
@@ -35,25 +35,45 @@ const KycSubmit = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
-      alert('Please register or login first using the form below.');
+      setError('Please register or login first using the form below.');
       return;
     }
+
+    if (!documentFile && !docUrl) {
+      setError('Please upload an identity document or provide a document URL.');
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (documentFile && !allowedTypes.includes(documentFile.type)) {
+      setError('Unsupported file type. Please upload JPG, JPEG, PNG, or PDF.');
+      return;
+    }
+
     setSubmitting(true);
+    setError('');
+    setSuccess('');
+
     try {
-      const payload = {
-        user: user._id,
-        role,
-        data: { details, docUrl }
-      };
-      await kycAPI.submit(payload);
-      // refresh user's KYC list
+      const formData = new FormData();
+      formData.append('user', user._id);
+      formData.append('role', role);
+      formData.append('data', JSON.stringify({ details, docUrl }));
+      if (documentFile) {
+        formData.append('document', documentFile);
+      } else if (docUrl) {
+        formData.append('documentUrl', docUrl);
+      }
+
+      await kycAPI.submit(formData);
       const res = await kycAPI.getByUser(user._id);
       setMyKycs(res || []);
-      alert('KYC submitted successfully. It will appear in pending list for review.');
+      setSuccess('KYC submitted successfully. It will appear in the pending list for review.');
       setDetails('');
       setDocUrl('');
+      setDocumentFile(null);
     } catch (err) {
-      alert('Failed to submit KYC: ' + (err?.response?.data?.message || err.message));
+      setError(err?.response?.data?.message || err.message || 'Failed to submit KYC.');
     } finally {
       setSubmitting(false);
     }
@@ -141,6 +161,15 @@ const KycSubmit = () => {
             </label>
 
             <label>
+              Identity Document <span style={{ fontWeight: 400, color: '#6b7280' }}>(required)</span>
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+              />
+            </label>
+
+            <label>
               Document URL <span style={{ fontWeight: 400, color: '#6b7280' }}>(optional)</span>
               <input
                 value={docUrl}
@@ -148,6 +177,9 @@ const KycSubmit = () => {
                 placeholder="Paste URL to scanned ID or cloud storage"
               />
             </label>
+
+            {error && <p className="kyc-error">{error}</p>}
+            {success && <p className="kyc-success">{success}</p>}
 
             <button type="submit" disabled={submitting}>
               {submitting ? 'Submitting…' : 'Submit KYC'}

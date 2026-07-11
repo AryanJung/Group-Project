@@ -16,6 +16,9 @@ const getNotificationDestination = (notification) => {
       return roomId ? `/property/${roomId}` : '/';
     case 'application_rejected':
       return roomId ? `/property/${roomId}` : '/';
+    case 'property_approved':
+    case 'property_rejected':
+      return '/admin';
     default:
       return '/';
   }
@@ -25,6 +28,10 @@ const typeLabel = {
   new_application: 'New Application',
   application_accepted: 'Application Accepted',
   application_rejected: 'Application Rejected',
+  kyc_approved: 'KYC Approved',
+  kyc_rejected: 'KYC Rejected',
+  property_approved: 'Property Approved',
+  property_rejected: 'Property Rejected',
 };
 
 // ─── Notification Bell ────────────────────────────────────────────────────────

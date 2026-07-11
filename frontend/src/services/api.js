@@ -12,8 +12,18 @@ api.interceptors.request.use(
   (config) => {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     if (user?.token) {
-      config.headers.Authorization = `Bearer ${user.token}`;
+      config.headers.Authorization = "Bearer " + user.token;
     }
+
+    // Allow the browser to set multipart boundaries automatically for FormData uploads.
+    // The default instance header is application/json, which breaks file uploads.
+    if (config.data && config.data.constructor?.name === 'FormData') {
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -68,6 +78,9 @@ const roomToProperty = (room) => ({
   createdBy: room.createdBy || null,
   isRented: room.isRented ?? false,
   maxRenters: room.maxRenters ?? 1,
+  status: room.status || 'approved',
+  createdAt: room.createdAt || null,
+  updatedAt: room.updatedAt || null,
 });
 
 const propertyToRoom = (property) => ({
@@ -115,6 +128,10 @@ export const authAPI = {
   },
   login: async (credentials) => {
     const response = await api.post('/auth/login', credentials);
+    return response.data;
+  },
+  getMe: async () => {
+    const response = await api.get('/auth/me');
     return response.data;
   },
 };
@@ -169,10 +186,8 @@ export const adminAPI = {
       });
     }
 
-    // Force multipart headers explicitly so Express and Multer can capture it
-    const response = await api.post('/rooms', finalPayload, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    // Let axios/browser set the multipart Content-Type boundary automatically.
+    const response = await api.post('/rooms', finalPayload);
     return roomToProperty(response.data);
   },
 
@@ -191,9 +206,7 @@ export const adminAPI = {
       });
     }
 
-    const response = await api.put(`/rooms/${id}`, finalPayload, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const response = await api.put(`/rooms/${id}`, finalPayload);
     return roomToProperty(response.data);
   },
 
@@ -423,6 +436,26 @@ export const superAdminAPI = {
     const response = await api.get('/super-admin/reviews', { headers: { 'x-super-key': key } });
     return response.data;
   },
+  listPendingProperties: async (key) => {
+    const response = await api.get('/super-admin/properties', { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  approveProperty: async (id, key) => {
+    const response = await api.post(`/super-admin/properties/${id}/approve`, {}, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  rejectProperty: async (id, key, body = {}) => {
+    const response = await api.post(`/super-admin/properties/${id}/reject`, body, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  listAppeals: async (key) => {
+    const response = await api.get('/super-admin/appeals', { headers: { 'x-super-key': key } });
+    return response.data;
+  },
+  resolveAppeal: async (id, action, key) => {
+    const response = await api.post(`/super-admin/appeals/${id}/resolve`, { action }, { headers: { 'x-super-key': key } });
+    return response.data;
+  },
   searchUsers: async (q, key) => {
     const response = await api.get('/super-admin/users', { params: { q }, headers: { 'x-super-key': key } });
     return response.data;
@@ -439,8 +472,8 @@ export const superAdminAPI = {
     const response = await api.post(`/super-admin/reviews/${id}/delete`, {}, { headers: { 'x-super-key': key } });
     return response.data;
   },
-  editReview: async (id, content, key) => {
-    const response = await api.post(`/super-admin/reviews/${id}/edit`, { content }, { headers: { 'x-super-key': key } });
+  publishReview: async (id, content, key) => {
+    const response = await api.post(`/super-admin/reviews/${id}/publish`, { content }, { headers: { 'x-super-key': key } });
     return response.data;
   },
 };

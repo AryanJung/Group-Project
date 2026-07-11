@@ -22,6 +22,15 @@ Router.patch('/users/:id/ban', superAdminController.banUser);
 // Review moderation
 Router.get('/reviews', superAdminController.listFlaggedReviews);
 Router.post('/reviews/:id/delete', superAdminController.deleteReview);
-Router.post('/reviews/:id/edit', superAdminController.editReview);
+Router.post('/reviews/:id/publish', superAdminController.editReview);
+
+// Property approval workflow
+Router.get('/properties', superAdminController.listPendingProperties);
+Router.post('/properties/:id/approve', superAdminController.approveProperty);
+Router.post('/properties/:id/reject', superAdminController.rejectProperty);
+
+// Appeals moderation
+Router.get('/appeals', superAdminController.listAppeals);
+Router.post('/appeals/:id/resolve', superAdminController.resolveAppeal);
 
 module.exports = Router;

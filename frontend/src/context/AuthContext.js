@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
@@ -12,6 +12,30 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const persist = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  const refreshUser = useCallback(async () => {
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) return null;
+
+    try {
+      const freshUser = await authAPI.getMe();
+      const mergedUser = {
+        ...JSON.parse(storedUser),
+        ...freshUser,
+        token: freshUser.token || JSON.parse(storedUser).token,
+      };
+      persist(mergedUser);
+      return mergedUser;
+    } catch (error) {
+      console.error('Failed to refresh user session', error);
+      return null;
+    }
+  }, []);
 
   // Rehydrate session from localStorage on mount
   useEffect(() => {
@@ -28,10 +52,23 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const persist = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
+  useEffect(() => {
+    if (!user?.token) return undefined;
+
+    const refreshOnFocus = () => {
+      refreshUser();
+    };
+
+    const intervalId = window.setInterval(() => {
+      refreshUser();
+    }, 10000);
+
+    window.addEventListener('focus', refreshOnFocus);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshOnFocus);
+    };
+  }, [refreshUser, user?.token]);
 
   /**
    * Register a new user.
@@ -81,6 +118,7 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
+    refreshUser,
     loading,
     isAuthenticated: Boolean(user?.token),
     // Role helpers — derived directly from the backend-issued role field
