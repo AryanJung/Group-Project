@@ -58,15 +58,30 @@ export const AuthProvider = ({ children }) => {
     const refreshOnFocus = () => {
       refreshUser();
     };
+    const syncUserFromStorage = () => {
+      const stored = localStorage.getItem('user');
+      if (!stored) return;
+
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed?.token) {
+          setUser(parsed);
+        }
+      } catch {
+        // Ignore invalid stored user data.
+      }
+    };
 
     const intervalId = window.setInterval(() => {
       refreshUser();
     }, 10000);
 
     window.addEventListener('focus', refreshOnFocus);
+    window.addEventListener('authRefresh', syncUserFromStorage);
     return () => {
       window.clearInterval(intervalId);
       window.removeEventListener('focus', refreshOnFocus);
+      window.removeEventListener('authRefresh', syncUserFromStorage);
     };
   }, [refreshUser, user?.token]);
 

@@ -18,6 +18,8 @@ const formatUserResponse = (user) => ({
   suspended: !!user.suspended,
   banned: !!user.banned,
   suspendedUntil: user.suspendedUntil || null,
+  suspensionStart: user.suspensionStart || null,
+  suspensionReason: user.suspensionReason || null,
   token: generateToken(user._id),
 });
 

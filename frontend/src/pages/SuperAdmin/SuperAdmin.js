@@ -28,6 +28,10 @@ const SuperAdmin = () => {
   // Properties pending approval
   const [pendingProperties, setPendingProperties] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [suspendModalUser, setSuspendModalUser] = useState(null);
+  const [suspendDuration, setSuspendDuration] = useState(24);
+  const [suspensionReason, setSuspensionReason] = useState('');
+  const [suspending, setSuspending] = useState(false);
 
   const checkAccess = async () => {
     try {
@@ -54,7 +58,8 @@ const SuperAdmin = () => {
       const res = await superAdminAPI.listReviews(key);
       setReviews(res || []);
     } catch (err) {
-      console.error(err);
+      console.error('loadReviews error:', err);
+      alert('Failed to load reviews: ' + (err?.response?.data?.message || err.message));
     }
   };
 
@@ -132,17 +137,66 @@ const SuperAdmin = () => {
       const res = await superAdminAPI.searchUsers(searchQ, key);
       setUsers(res || []);
     } catch (err) {
-      console.error(err);
+      console.error('searchUsers error:', err);
+      alert('Failed to search users: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const openSuspendDialog = (user) => {
+    setSuspendModalUser(user);
+    setSuspendDuration(24);
+    setSuspensionReason('');
+  };
+
+  const closeSuspendDialog = () => {
+    setSuspendModalUser(null);
+    setSuspending(false);
+  };
+
+  const confirmSuspend = async () => {
+    if (!suspendModalUser) return;
+    if (!suspendDuration || Number(suspendDuration) <= 0) {
+      alert('Please enter a valid suspension duration in hours.');
+      return;
+    }
+
+    const payload = {
+      suspended: true,
+      durationHours: Number(suspendDuration),
+      suspensionReason: suspensionReason?.trim() || '',
+    };
+
+    setSuspending(true);
+    try {
+      await superAdminAPI.suspendUser(suspendModalUser._id, payload, key);
+      await handleSearchUsers();
+      alert('User suspended');
+      closeSuspendDialog();
+    } catch (err) {
+      console.error('suspend error', err);
+      alert('Failed to suspend user: ' + (err?.response?.data?.message || err.message));
+      setSuspending(false);
     }
   };
 
   const toggleSuspend = async (id, current) => {
+    if (!current) {
+      const userToSuspend = users.find((u) => u._id === id);
+      openSuspendDialog(userToSuspend || { _id: id });
+      return;
+    }
+
+    const nextSuspendedState = false;
+    setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, suspended: nextSuspendedState } : u)));
+
     try {
-      await superAdminAPI.suspendUser(id, !current, key);
+      await superAdminAPI.suspendUser(id, { suspended: false }, key);
       await handleSearchUsers();
+      alert('User unsuspended');
     } catch (err) {
-      console.error('suspend error', err);
-      alert('Failed to update suspend status: ' + (err?.response?.data?.message || err.message));
+      setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, suspended: current } : u)));
+      console.error('unsuspend error', err);
+      alert('Failed to unsuspend user: ' + (err?.response?.data?.message || err.message));
     }
   };
 
@@ -185,12 +239,12 @@ const SuperAdmin = () => {
     }
   };
 
-  const handleResolveAppeal = async (id, action) => {
-    if (!window.confirm(action === 'unban' ? 'Unban this user?' : 'Keep this account banned?')) return;
+  const handleResolveAppeal = async (id, action, label) => {
+    if (!window.confirm(label)) return;
     try {
       await superAdminAPI.resolveAppeal(id, action, key);
       setAppeals((prev) => prev.filter((appeal) => appeal._id !== id));
-      alert(action === 'unban' ? 'Appeal resolved and account unbanned' : 'Appeal resolved and account remains banned');
+      alert(`Appeal resolved: ${label}`);
     } catch (err) {
       console.error('resolve appeal error', err);
       alert('Failed to resolve appeal: ' + (err?.response?.data?.message || err.message));
@@ -389,20 +443,29 @@ const SuperAdmin = () => {
 
             {tab === 'appeals' && (
               <div>
-                <h2>Appeals</h2>
-                {appeals.length === 0 && <p>No appeals to review.</p>}
+                <h2>Suspension Appeals</h2>
+                {appeals.filter(a => a.type === 'unsuspend').length === 0 && <p>No suspension appeals to review.</p>}
                 <ul className="review-list">
-                  {appeals.map((appeal) => (
+                  {appeals.filter(a => a.type === 'unsuspend').map((appeal) => (
                     <li key={appeal._id} className="review-item">
                       <div>
                         <strong>{appeal.user?.name || 'Unknown user'} ({appeal.user?.email || 'No email'})</strong>
-                        <p>{appeal.message || 'No message provided.'}</p>
+                        <p style={{ margin: '0.75rem 0 0.5rem' }}>{appeal.message || 'No message provided.'}</p>
                         <div>Submitted: {new Date(appeal.createdAt).toLocaleString()}</div>
-                        <div>Status: {appeal.status}</div>
+                        {appeal.user?.suspendedUntil && (
+                          <div>Suspension expires: {new Date(appeal.user.suspendedUntil).toLocaleString()}</div>
+                        )}
+                        {appeal.user?.suspensionReason && (
+                          <div>Suspension reason: {appeal.user.suspensionReason}</div>
+                        )}
                       </div>
                       <div className="review-actions">
-                        <button onClick={() => handleResolveAppeal(appeal._id, 'unban')} disabled={appeal.status === 'closed'}>Unban</button>
-                        <button onClick={() => handleResolveAppeal(appeal._id, 'continue')} disabled={appeal.status === 'closed'}>Keep Banned</button>
+                        <button onClick={() => handleResolveAppeal(appeal._id, 'approve', 'Unsuspend this user?')}>
+                          Unsuspend
+                        </button>
+                        <button onClick={() => handleResolveAppeal(appeal._id, 'reject', 'Keep the account suspended?')}>
+                          Keep Suspended
+                        </button>
                       </div>
                     </li>
                   ))}
@@ -429,7 +492,48 @@ const SuperAdmin = () => {
           </div>
         </div>
       )}
-
+ 
+      {suspendModalUser && (
+        <div className="suspend-modal-overlay" onClick={closeSuspendDialog}>
+          <div className="suspend-modal" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="document-modal-close" onClick={closeSuspendDialog} aria-label="Close suspend dialog">
+              ×
+            </button>
+            <div className="suspend-modal-content">
+              <h2>Suspend User</h2>
+              <p>Choose a suspension duration and optional reason.</p>
+              <label>
+                Duration (hours)
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={suspendDuration}
+                  onChange={(e) => setSuspendDuration(e.target.value)}
+                />
+              </label>
+              <label>
+                Reason (optional)
+                <textarea
+                  rows="4"
+                  value={suspensionReason}
+                  onChange={(e) => setSuspensionReason(e.target.value)}
+                  placeholder="Suspension reason"
+                />
+              </label>
+              <div className="suspend-actions">
+                <button type="button" onClick={closeSuspendDialog} className="cancel-button">
+                  Cancel
+                </button>
+                <button type="button" onClick={confirmSuspend} disabled={suspending} className="confirm-button">
+                  {suspending ? 'Suspending...' : 'Suspend'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+ 
       {selectedImage && (
         <div className="document-modal-overlay" onClick={() => setSelectedImage(null)}>
           <div className="document-modal" onClick={(e) => e.stopPropagation()}>

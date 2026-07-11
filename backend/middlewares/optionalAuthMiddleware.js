@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const expireSuspensionIfNeeded = require('./suspensionUtils');
 
 // Attach user if Authorization header present. Do NOT block banned/suspended users.
 const attachUserIfPresent = async (req, res, next) => {
@@ -10,7 +11,7 @@ const attachUserIfPresent = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
       const user = await User.findById(decoded.id).select('-password');
       if (user) {
-        req.user = user;
+        req.user = await expireSuspensionIfNeeded(user);
       }
     }
   } catch (err) {

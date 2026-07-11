@@ -41,6 +41,29 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.reload();
     }
+
+    if (
+      error.response?.status === 403 &&
+      (error.response.data?.suspended || error.response.data?.banned)
+    ) {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+        if (storedUser?.token) {
+          const updatedUser = {
+            ...storedUser,
+            suspended: Boolean(error.response.data?.suspended || storedUser.suspended),
+            banned: Boolean(error.response.data?.banned || storedUser.banned),
+            suspendedUntil: error.response.data?.suspendedUntil || storedUser.suspendedUntil,
+            suspensionReason: error.response.data?.suspensionReason ?? storedUser.suspensionReason,
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      } catch {
+        // Ignore localStorage sync failures.
+      }
+      window.dispatchEvent(new Event('authRefresh'));
+    }
+
     return Promise.reject(error);
   }
 );
@@ -460,8 +483,8 @@ export const superAdminAPI = {
     const response = await api.get('/super-admin/users', { params: { q }, headers: { 'x-super-key': key } });
     return response.data;
   },
-  suspendUser: async (id, suspended, key) => {
-    const response = await api.patch(`/super-admin/users/${id}/suspend`, { suspended }, { headers: { 'x-super-key': key } });
+  suspendUser: async (id, payload, key) => {
+    const response = await api.patch(`/super-admin/users/${id}/suspend`, payload, { headers: { 'x-super-key': key } });
     return response.data;
   },
   banUser: async (id, banned, key) => {
@@ -496,6 +519,10 @@ export const kycAPI = {
 export const appealsAPI = {
   create: async (message) => {
     const response = await api.post('/appeals', { message });
+    return response.data;
+  },
+  getMine: async () => {
+    const response = await api.get('/appeals/me');
     return response.data;
   },
 };

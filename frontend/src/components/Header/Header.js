@@ -32,6 +32,10 @@ const typeLabel = {
   kyc_rejected: 'KYC Rejected',
   property_approved: 'Property Approved',
   property_rejected: 'Property Rejected',
+  account_suspended: 'Account Suspended',
+  account_unsuspended: 'Account Restored',
+  account_banned: 'Account Banned',
+  account_unbanned: 'Account Unbanned',
 };
 
 // ─── Notification Bell ────────────────────────────────────────────────────────

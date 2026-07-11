@@ -7,20 +7,28 @@ const Notification = require('../models/Notification');
 
 const createKycNotification = async (recipientId, type, message) => {
   if (!recipientId) return;
-  await Notification.create({
-    recipient: recipientId,
-    type,
-    message,
-  });
+  try {
+    await Notification.create({
+      recipient: recipientId,
+      type,
+      message,
+    });
+  } catch (error) {
+    console.error('Failed to create KYC notification:', error.message);
+  }
 };
 
 const createUserNotification = async (recipientId, type, message) => {
   if (!recipientId) return;
-  await Notification.create({
-    recipient: recipientId,
-    type,
-    message,
-  });
+  try {
+    await Notification.create({
+      recipient: recipientId,
+      type,
+      message,
+    });
+  } catch (error) {
+    console.error('Failed to create user notification:', error.message);
+  }
 };
 
 // Validate key for simple access endpoint
@@ -188,12 +196,32 @@ const searchUsers = async (req, res) => {
 const suspendUser = async (req, res) => {
   try {
     const id = req.params.id;
-    const { suspended } = req.body;
+    const { suspended, suspensionEnd, suspensionReason, durationHours } = req.body || {};
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    // If suspending, set suspended flag and suspendedUntil 15 minutes ahead
+
     const nextSuspendedState = !!suspended;
-    const nextSuspendedUntil = nextSuspendedState ? new Date(Date.now() + 15 * 60 * 1000) : null;
+    let nextSuspendedUntil = null;
+    let nextSuspensionStart = null;
+    const now = new Date();
+
+    if (nextSuspendedState) {
+      nextSuspensionStart = now;
+      if (suspensionEnd) {
+        const parsed = new Date(suspensionEnd);
+        nextSuspendedUntil = Number.isNaN(parsed.getTime()) ? null : parsed;
+      }
+      if (!nextSuspendedUntil && typeof durationHours === 'number' && durationHours > 0) {
+        nextSuspendedUntil = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+      }
+      if (!nextSuspendedUntil) {
+        nextSuspendedUntil = new Date(now.getTime() + 15 * 60 * 1000);
+      }
+    }
+
+    const message = nextSuspendedState
+      ? `Your account has been suspended${nextSuspendedUntil ? ' until ' + nextSuspendedUntil.toISOString() : ''}.`
+      : 'Your account has been restored. You now have full access.';
 
     await User.findByIdAndUpdate(
       user._id,
@@ -201,16 +229,20 @@ const suspendUser = async (req, res) => {
         $set: {
           suspended: nextSuspendedState,
           suspendedUntil: nextSuspendedUntil,
-          notifications: [...(user.notifications || []), { message: `Your account has been ${nextSuspendedState ? 'suspended' : 'unsuspended'}` }],
+          suspensionStart: nextSuspendedState ? nextSuspensionStart : null,
+          suspensionReason: nextSuspendedState ? (suspensionReason || '') : null,
+          notifications: [...(user.notifications || []), { message }],
         },
       },
       { new: true, runValidators: false }
     );
+
     await createUserNotification(
       user._id,
       nextSuspendedState ? 'account_suspended' : 'account_unsuspended',
-      `Your account has been ${nextSuspendedState ? 'suspended' : 'unsuspended'}`
+      message
     );
+
     res.json({ message: `User ${nextSuspendedState ? 'suspended' : 'unsuspended'}` });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -444,6 +476,17 @@ const editReview = async (req, res) => {
       await createUserNotification(user._id, 'review_approved', 'One of your reviews was approved by moderators.');
     }
 
+    const room = await Room.findById(review.room);
+    if (room) {
+      const approvedReviews = await Review.find({
+        room: room._id,
+        status: 'approved',
+      });
+      const totalRating = approvedReviews.reduce((sum, r) => sum + r.rating, 0);
+      room.rating = approvedReviews.length > 0 ? parseFloat((totalRating / approvedReviews.length).toFixed(1)) : 0;
+      await room.save();
+    }
+
     res.json({
       message: 'Review published',
       review: updatedReview
@@ -458,8 +501,8 @@ const editReview = async (req, res) => {
 
 const listAppeals = async (req, res) => {
   try {
-    const appeals = await Appeal.find({ status: { $ne: 'closed' } })
-      .populate('user', 'name email banned')
+    const appeals = await Appeal.find({ type: 'unsuspend' })
+      .populate('user', 'name email banned suspended suspendedUntil suspensionReason')
       .sort({ createdAt: -1 });
 
     res.json(appeals);
@@ -471,11 +514,15 @@ const listAppeals = async (req, res) => {
 const resolveAppeal = async (req, res) => {
   try {
     const id = req.params.id;
-    const { action = 'continue' } = req.body || {};
-    const appeal = await Appeal.findById(id).populate('user', 'name email banned');
+    const { action = 'reject' } = req.body || {};
+    const appeal = await Appeal.findById(id).populate('user', 'name email banned suspended suspendedUntil suspensionReason');
 
     if (!appeal) {
       return res.status(404).json({ message: 'Appeal not found' });
+    }
+
+    if (appeal.type !== 'unsuspend') {
+      return res.status(400).json({ message: 'Only suspension appeals are handled' });
     }
 
     const user = await User.findById(appeal.user?._id || appeal.user);
@@ -483,33 +530,40 @@ const resolveAppeal = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const isUnban = action === 'unban';
-    const nextBannedState = isUnban ? false : true;
-    const nextMessage = isUnban
-      ? 'Your appeal was reviewed and your account has been unbanned.'
-      : 'Your appeal was reviewed and your account remains banned.';
+    const approved = action === 'approve';
+    const updatePayload = approved
+      ? {
+          suspended: false,
+          suspendedUntil: null,
+          suspensionStart: null,
+          suspensionReason: null,
+        }
+      : { suspended: true };
+    
+    const nextMessage = approved
+      ? 'Your appeal was reviewed and your account has been unsuspended.'
+      : 'Your appeal was reviewed and your account remains suspended.';
+    
+    const notificationType = approved ? 'account_unsuspended' : 'account_suspended';
 
     await User.findByIdAndUpdate(
       user._id,
       {
         $set: {
-          banned: nextBannedState,
+          ...updatePayload,
           notifications: [...(user.notifications || []), { message: nextMessage }],
         },
       },
       { new: true, runValidators: false }
     );
 
-    await createUserNotification(
-      user._id,
-      isUnban ? 'account_unbanned' : 'account_banned',
-      nextMessage
-    );
-
+    await createUserNotification(user._id, notificationType, nextMessage);
     await Appeal.findByIdAndDelete(id);
 
     res.json({
-      message: isUnban ? 'Appeal resolved and account unbanned' : 'Appeal resolved and account remains banned',
+      message: approved
+        ? 'Appeal resolved and account unsuspended'
+        : 'Appeal resolved and account remains suspended',
       removed: true,
     });
   } catch (error) {

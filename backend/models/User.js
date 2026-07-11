@@ -17,6 +17,8 @@ const userSchema = new mongoose.Schema(
         banned: { type: Boolean, default: false },
         kycVerified: { type: Boolean, default: false },
         suspendedUntil: { type: Date, default: null },
+        suspensionStart: { type: Date, default: null },
+        suspensionReason: { type: String, default: '' },
         notifications: { type: Array, default: [] },
     },
     {
