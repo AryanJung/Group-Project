@@ -5,6 +5,7 @@ import { notificationAPI } from '../../services/api';
 import LoginModal from '../Auth/LoginModal';
 import RegisterModal from '../Auth/RegisterModal';
 import './Header.css';
+import logo from '../cut.png';
 
 // Returns the navigation destination for a notification
 const getNotificationDestination = (notification) => {
@@ -32,10 +33,6 @@ const typeLabel = {
   kyc_rejected: 'KYC Rejected',
   property_approved: 'Property Approved',
   property_rejected: 'Property Rejected',
-  account_suspended: 'Account Suspended',
-  account_unsuspended: 'Account Restored',
-  account_banned: 'Account Banned',
-  account_unbanned: 'Account Unbanned',
 };
 
 // ─── Notification Bell ────────────────────────────────────────────────────────
@@ -202,19 +199,13 @@ const Header = () => {
       <header className="header">
         <div className="header-container">
           <div className="logo">
-            <h1>RentalProperties</h1>
-          </div>
+  <img src={logo} alt="Ghar Logo" className="logo-img" /></div>
           <nav className="nav">
             <a href="#home" className="nav-link" onClick={(e) => handleNavClick(e, 'home')}>Home</a>
              <Link to="/properties" className="nav-link">Properties</Link>
             <a href="#features" className="nav-link" onClick={(e) => handleNavClick(e, 'features')}>Features</a>
             <a href="#about" className="nav-link" onClick={(e) => handleNavClick(e, 'about')}>About</a>
             <a href="#contact" className="nav-link" onClick={(e) => handleNavClick(e, 'contact')}>Contact</a>
-
-            {/* Admin dashboard — owners + admins */}
-            {isAuthenticated && isOwner && (
-              <Link to="/admin" className="nav-link">Admin</Link>
-            )}
             {/* Super Admin panel */}
             {isAuthenticated && isSuperAdmin && (
               <Link to="/super-admin" className="nav-link">SuperAdmin</Link>
