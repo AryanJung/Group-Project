@@ -206,7 +206,7 @@ const Header = () => {
           </div>
           <nav className="nav">
             <a href="#home" className="nav-link" onClick={(e) => handleNavClick(e, 'home')}>Home</a>
-            <a href="#properties" className="nav-link" onClick={(e) => handleNavClick(e, 'properties')}>Properties</a>
+             <Link to="/properties" className="nav-link">Properties</Link>
             <a href="#features" className="nav-link" onClick={(e) => handleNavClick(e, 'features')}>Features</a>
             <a href="#about" className="nav-link" onClick={(e) => handleNavClick(e, 'about')}>About</a>
             <a href="#contact" className="nav-link" onClick={(e) => handleNavClick(e, 'contact')}>Contact</a>
