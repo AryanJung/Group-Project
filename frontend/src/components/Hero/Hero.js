@@ -41,7 +41,7 @@ const Hero = () => {
         </div>
       </div>
 
-      <div className="hero-image">
+      {/* <div className="hero-image">
         <div className="hero-placeholder">
           <span aria-hidden="true">
             <svg width="92" height="92" viewBox="0 0 24 24" fill="none">
@@ -49,7 +49,7 @@ const Hero = () => {
             </svg>
           </span>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
