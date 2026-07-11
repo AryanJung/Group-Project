@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { groupChatAPI } from '../../services/api';
@@ -13,8 +13,14 @@ const MyChats = () => {
   const [error, setError] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const loadChats = () => {
-    if (!user?.token) {
+  // Boolean, not the token string: AuthContext refreshes the session every 10s
+  // and the backend re-signs a new JWT each time, so `user.token` changes on
+  // every refresh. Keying on it (or on `user`) would re-run loadChats, flip
+  // `loading`, and unmount the page/modal every 10s. A boolean stays stable.
+  const isAuthenticated = Boolean(user?.token);
+
+  const loadChats = useCallback(() => {
+    if (!isAuthenticated) {
       navigate('/', { replace: true });
       return;
     }
@@ -25,11 +31,11 @@ const MyChats = () => {
       .then((data) => setChats(data))
       .catch(() => setError('Failed to load your chats. Please try again.'))
       .finally(() => setLoading(false));
-  };
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     loadChats();
-  }, [user, navigate]);
+  }, [loadChats]);
 
   if (loading) {
     return (

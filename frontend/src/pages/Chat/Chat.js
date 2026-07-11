@@ -44,6 +44,11 @@ const Chat = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Boolean, not the token string: AuthContext refreshes the session every 10s
+  // and the backend re-signs a new JWT (fresh `iat`) each time, so `user.token`
+  // changes on every refresh. Keying `refreshChat` on that value would re-run
+  // the full connect sequence and flash the skeletons. A boolean stays stable.
+  const isAuthenticated = Boolean(user?.token);
 
   const [property, setProperty] = useState(null);
   const [chat, setChat] = useState(null);
@@ -152,7 +157,7 @@ const Chat = () => {
   }, []);
 
   const refreshChat = useCallback(async () => {
-    if (!user?.token) {
+    if (!isAuthenticated) {
       navigate(`/property/${id}`, { replace: true });
       return;
     }
@@ -186,7 +191,7 @@ const Chat = () => {
     } finally {
       setIsConnecting(false);
     }
-  }, [fetchMessages, id, navigate, user]);
+  }, [fetchMessages, id, navigate, isAuthenticated]);
 
   useEffect(() => {
     refreshChat();
