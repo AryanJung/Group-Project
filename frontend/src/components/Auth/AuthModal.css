@@ -224,6 +224,19 @@
   }
 }
 
+.otp-subtitle {
+  color: #64748B;
+  font-size: 0.95rem;
+  margin: -0.5rem 0 1.5rem;
+  line-height: 1.5;
+}
+
+.otp-success {
+  color: #059669;
+  font-size: 0.875rem;
+  margin: 0 0 1rem;
+}
+
 @media (max-width: 720px) {
   .modal-content {
     width: min(94%, 430px);
