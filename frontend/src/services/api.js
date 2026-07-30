@@ -35,35 +35,17 @@ api.interceptors.response.use(
   (error) => {
     const requestUrl = error.config?.url || '';
     const isAuthAttempt =
-      requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/verify-otp') ||
+      requestUrl.includes('/auth/resend-otp') ||
+      requestUrl.includes('/auth/verify-register-otp') ||
+      requestUrl.includes('/auth/resend-register-otp');
 
     if (error.response?.status === 401 && !isAuthAttempt) {
       localStorage.removeItem('user');
       window.location.reload();
     }
-
-    if (
-      error.response?.status === 403 &&
-      (error.response.data?.suspended || error.response.data?.banned)
-    ) {
-      try {
-        const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-        if (storedUser?.token) {
-          const updatedUser = {
-            ...storedUser,
-            suspended: Boolean(error.response.data?.suspended || storedUser.suspended),
-            banned: Boolean(error.response.data?.banned || storedUser.banned),
-            suspendedUntil: error.response.data?.suspendedUntil || storedUser.suspendedUntil,
-            suspensionReason: error.response.data?.suspensionReason ?? storedUser.suspensionReason,
-          };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-        }
-      } catch {
-        // Ignore localStorage sync failures.
-      }
-      window.dispatchEvent(new Event('authRefresh'));
-    }
-
     return Promise.reject(error);
   }
 );
@@ -153,6 +135,23 @@ export const authAPI = {
     const response = await api.post('/auth/login', credentials);
     return response.data;
   },
+  verifyRegisterOtp: async ({ otpSessionId, otp }) => {
+    const response = await api.post('/auth/verify-register-otp', { otpSessionId, otp });
+    return response.data;
+  },
+  resendRegisterOtp: async ({ otpSessionId }) => {
+    const response = await api.post('/auth/resend-register-otp', { otpSessionId });
+    return response.data;
+  },
+  // Backwards compatibility aliases
+  verifyOtp: async ({ otpSessionId, otp }) => {
+    const response = await api.post('/auth/verify-register-otp', { otpSessionId, otp });
+    return response.data;
+  },
+  resendOtp: async ({ otpSessionId }) => {
+    const response = await api.post('/auth/resend-register-otp', { otpSessionId });
+    return response.data;
+  },
   getMe: async () => {
     const response = await api.get('/auth/me');
     return response.data;
@@ -193,8 +192,6 @@ export const adminAPI = {
   },
 
   createProperty: async (propertyData) => {
-    // Check if the data is already a FormData object or if it's a regular object
-    // If it's a regular object, we convert it to FormData to support images cleanly
     let finalPayload = propertyData;
     
     if (!(propertyData instanceof FormData)) {
@@ -209,7 +206,6 @@ export const adminAPI = {
       });
     }
 
-    // Let axios/browser set the multipart Content-Type boundary automatically.
     const response = await api.post('/rooms', finalPayload);
     return roomToProperty(response.data);
   },
@@ -270,26 +266,21 @@ export const chatbotAPI = {
 // ─── Rental API ─────────────────────────────────────────────────────────────
 
 export const rentalAPI = {
-  /** Cancel an active rental (removes Rental record, recalculates isRented) */
   cancelRent: async (roomId) => {
     const response = await api.delete(`/rooms/${roomId}/rent`);
     return response.data;
   },
 
-  /** Full rental + application status for current user on a specific room */
   getStatus: async (roomId) => {
     const response = await api.get(`/rooms/${roomId}/rent/status`);
     return response.data;
-    // Returns: { isOwner, isRenter, isRented, maxRenters, rental, application: { _id, status } }
   },
 
-  /** All chat sessions (legacy room-based) */
   getMyChats: async () => {
     const response = await api.get('/rentals/my-chats');
     return response.data;
   },
 
-  /** All rooms the current user is actively renting */
   getMyRentals: async () => {
     const response = await api.get('/rentals/my-rentals');
     return response.data;
@@ -299,50 +290,42 @@ export const rentalAPI = {
 // ─── Application API ─────────────────────────────────────────────────────────
 
 export const applicationAPI = {
-  /** Applicant submits a rental application */
   apply: async (roomId, message = '') => {
     const response = await api.post(`/rooms/${roomId}/apply`, { message });
     return response.data;
   },
 
-  /** Applicant withdraws a pending application */
   withdraw: async (applicationId) => {
     const response = await api.delete(`/applications/${applicationId}`);
     return response.data;
   },
 
-  /** Applicant views all their own applications */
   getMine: async () => {
     const response = await api.get('/applications/mine');
     return response.data;
   },
 
-  /** Owner views all applications for a specific listing */
   getByRoom: async (roomId, status = '') => {
     const params = status ? `?status=${status}` : '';
     const response = await api.get(`/rooms/${roomId}/applications${params}`);
     return response.data;
   },
 
-  /** Owner accepts an application */
   accept: async (applicationId) => {
     const response = await api.patch(`/applications/${applicationId}/accept`);
     return response.data;
   },
 
-  /** Owner rejects an application */
   reject: async (applicationId) => {
     const response = await api.patch(`/applications/${applicationId}/reject`);
     return response.data;
   },
 
-  /** Owner gets list of all accepted renters for a room (for chat invites) */
   getApprovedRenters: async (roomId) => {
     const response = await api.get(`/rooms/${roomId}/approved-renters`);
     return response.data;
   },
 
-  /** Owner gets ALL applications across ALL their listings */
   getAllForOwner: async (status = '') => {
     const params = status ? `?status=${status}` : '';
     const response = await api.get(`/applications/owner${params}`);
@@ -377,55 +360,46 @@ export const notificationAPI = {
 // ─── Group Chat API ───────────────────────────────────────────────────────────
 
 export const groupChatAPI = {
-  /** Owner creates a named group chat for a room */
   create: async (name, roomId, memberIds = []) => {
     const response = await api.post('/group-chats', { name, roomId, memberIds });
     return response.data;
   },
 
-  /** All group chats the current user is part of */
   getMine: async () => {
     const response = await api.get('/group-chats/mine');
     return response.data;
   },
 
-  /** Single chat detail */
   getById: async (chatId) => {
     const response = await api.get(`/group-chats/${chatId}`);
     return response.data;
   },
 
-  /** Add members — pass { memberIds } or { addAll: true } */
   addMembers: async (chatId, payload) => {
     const response = await api.post(`/group-chats/${chatId}/members`, payload);
     return response.data;
   },
 
-  /** Remove a single member */
   removeMember: async (chatId, userId) => {
     const response = await api.delete(`/group-chats/${chatId}/members/${userId}`);
     return response.data;
   },
 
-  /** Get messages for a group chat */
   getMessages: async (chatId) => {
     const response = await api.get(`/group-chats/${chatId}/messages`);
     return response.data;
   },
 
-  /** Send a message to a group chat */
   sendMessage: async (chatId, text) => {
     const response = await api.post(`/group-chats/${chatId}/messages`, { text });
     return response.data;
   },
 
-  /** Get GroupChat by Room ID (bridges Room ID → GroupChat ID) */
   getByRoom: async (roomId) => {
     const response = await api.get(`/group-chats/by-room/${roomId}`);
     return response.data;
   },
 
-  // ── Legacy (room-scoped) ──
   getLegacyMessages: async (roomId) => {
     const response = await api.get(`/rooms/${roomId}/group-chat/messages`);
     return response.data;
@@ -436,7 +410,7 @@ export const groupChatAPI = {
   },
 };
 
-// ─── Super Admin API (added by teammate) ─────────────────────────────────────
+// ─── Super Admin API ─────────────────────────────────────────────────────────
 
 export const superAdminAPI = {
   access: async (key) => {
@@ -483,8 +457,8 @@ export const superAdminAPI = {
     const response = await api.get('/super-admin/users', { params: { q }, headers: { 'x-super-key': key } });
     return response.data;
   },
-  suspendUser: async (id, payload, key) => {
-    const response = await api.patch(`/super-admin/users/${id}/suspend`, payload, { headers: { 'x-super-key': key } });
+  suspendUser: async (id, suspended, key) => {
+    const response = await api.patch(`/super-admin/users/${id}/suspend`, { suspended }, { headers: { 'x-super-key': key } });
     return response.data;
   },
   banUser: async (id, banned, key) => {
@@ -501,7 +475,7 @@ export const superAdminAPI = {
   },
 };
 
-// ─── KYC API (added by teammate) ─────────────────────────────────────────────
+// ─── KYC API ─────────────────────────────────────────────────────────────
 
 export const kycAPI = {
   submit: async (payload) => {
@@ -514,15 +488,11 @@ export const kycAPI = {
   },
 };
 
-// ─── Appeals API (added by teammate) ─────────────────────────────────────────
+// ─── Appeals API ─────────────────────────────────────────────────────────
 
 export const appealsAPI = {
   create: async (message) => {
     const response = await api.post('/appeals', { message });
-    return response.data;
-  },
-  getMine: async () => {
-    const response = await api.get('/appeals/me');
     return response.data;
   },
 };
