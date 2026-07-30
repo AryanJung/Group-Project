@@ -1,0 +1,34 @@
+const mongoose = require("mongoose");
+
+const registerOtpSchema = new mongoose.Schema(
+  {
+    userData: {
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      password: { type: String, required: true },
+      role: { type: String, default: "renter" },
+      username: { type: String, required: true },
+      phoneNumber: { type: String, required: true },
+    },
+    sessionToken: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    otpHash: {
+      type: String,
+      required: true,
+    },
+    expiresAt: {
+      type: Date,
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+registerOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+module.exports = mongoose.model("RegisterOtp", registerOtpSchema);
