@@ -17,6 +17,14 @@ const Admin = () => {
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
 
+  // Applicant profile / discussion thread panel (expanded inline per application)
+  const [expandedApp, setExpandedApp] = useState(null);
+  const [expandedMode, setExpandedMode] = useState(null); // 'profile' | 'messages'
+  const [panelLoading, setPanelLoading] = useState(false);
+  const [profileData, setProfileData] = useState(null);
+  const [threadMessages, setThreadMessages] = useState([]);
+  const [messageText, setMessageText] = useState('');
+
   // Owner's own listings
   const [myRooms, setMyRooms] = useState([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
@@ -87,6 +95,61 @@ const Admin = () => {
         .finally(() => setApplicationsLoading(false));
     }
   }, [activeTab, applicationsRoomId, isOwner]);
+
+  const closeApplicationPanel = () => {
+    setExpandedApp(null);
+    setExpandedMode(null);
+    setProfileData(null);
+    setThreadMessages([]);
+    setMessageText('');
+  };
+
+  const handleViewProfile = async (app) => {
+    if (expandedApp === app._id && expandedMode === 'profile') {
+      closeApplicationPanel();
+      return;
+    }
+    setExpandedApp(app._id);
+    setExpandedMode('profile');
+    setPanelLoading(true);
+    try {
+      const data = await applicationAPI.getApplicantProfile(app._id);
+      setProfileData(data);
+    } catch (e) {
+      setFormError(e.response?.data?.message || 'Failed to load applicant profile');
+    } finally {
+      setPanelLoading(false);
+    }
+  };
+
+  const handleViewMessages = async (app) => {
+    if (expandedApp === app._id && expandedMode === 'messages') {
+      closeApplicationPanel();
+      return;
+    }
+    setExpandedApp(app._id);
+    setExpandedMode('messages');
+    setPanelLoading(true);
+    try {
+      const data = await applicationAPI.getMessages(app._id);
+      setThreadMessages(data);
+    } catch (e) {
+      setFormError(e.response?.data?.message || 'Failed to load messages');
+    } finally {
+      setPanelLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (app) => {
+    if (!messageText.trim()) return;
+    try {
+      const sent = await applicationAPI.sendMessage(app._id, messageText.trim());
+      setThreadMessages((prev) => [...prev, sent]);
+      setMessageText('');
+    } catch (e) {
+      setFormError(e.response?.data?.message || 'Failed to send message');
+    }
+  };
 
   // Load renter's rentals when My Rentals tab is opened
   useEffect(() => {
@@ -552,65 +615,144 @@ const Admin = () => {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {applications.map((app) => (
-                      <div key={app._id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                        <div>
-                          {app.room?.title && (
-                            <div style={{ fontSize: '0.72rem', background: '#f0f9ff', color: '#0369a1', display: 'inline-block', padding: '0.1rem 0.55rem', borderRadius: '99px', fontWeight: 600, marginBottom: '0.4rem' }}>
-                              {app.room.title}
+                      <div key={app._id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                          <div>
+                            {app.room?.title && (
+                              <div style={{ fontSize: '0.72rem', background: '#f0f9ff', color: '#0369a1', display: 'inline-block', padding: '0.1rem 0.55rem', borderRadius: '99px', fontWeight: 600, marginBottom: '0.4rem' }}>
+                                {app.room.title}
+                              </div>
+                            )}
+                            <div style={{ fontWeight: 700, color: '#111827', marginBottom: '0.25rem' }}>
+                              {app.applicant?.name || 'Unknown'}
+                              <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 400, marginLeft: '0.5rem' }}>{app.applicant?.email}</span>
                             </div>
-                          )}
-                          <div style={{ fontWeight: 700, color: '#111827', marginBottom: '0.25rem' }}>
-                            {app.applicant?.name || 'Unknown'}
-                            <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 400, marginLeft: '0.5rem' }}>{app.applicant?.email}</span>
+                            {app.message && (
+                              <p style={{ fontSize: '0.85rem', color: '#374151', fontStyle: 'italic', margin: '0.25rem 0' }}>"{app.message}"</p>
+                            )}
+                            <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                              Applied {new Date(app.createdAt).toLocaleDateString()}
+                            </div>
                           </div>
-                          {app.message && (
-                            <p style={{ fontSize: '0.85rem', color: '#374151', fontStyle: 'italic', margin: '0.25rem 0' }}>"{app.message}"</p>
-                          )}
-                          <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                            Applied {new Date(app.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                          {app.status === 'pending' ? (
-                            <>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {app.status === 'pending' ? (
+                                <>
+                                  <button
+                                    style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
+                                    onClick={async () => {
+                                      try {
+                                        await applicationAPI.accept(app._id);
+                                        setApplications((prev) =>
+                                          prev.map((a) => a._id === app._id ? { ...a, status: 'accepted' } : a)
+                                        );
+                                      } catch (e) { setFormError(e.response?.data?.message || 'Failed to accept'); }
+                                    }}
+                                  >
+                                    Accept
+                                  </button>
+                                  <button
+                                    style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
+                                    onClick={async () => {
+                                      try {
+                                        await applicationAPI.reject(app._id);
+                                        setApplications((prev) =>
+                                          prev.map((a) => a._id === app._id ? { ...a, status: 'rejected' } : a)
+                                        );
+                                      } catch (e) { setFormError(e.response?.data?.message || 'Failed to reject'); }
+                                    }}
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{
+                                  padding: '0.35rem 0.85rem', borderRadius: '99px', fontWeight: 700, fontSize: '0.75rem',
+                                  background: app.status === 'accepted' ? '#dcfce7' : '#fee2e2',
+                                  color: app.status === 'accepted' ? '#15803d' : '#b91c1c',
+                                  textTransform: 'capitalize',
+                                }}>
+                                  {app.status}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <button
-                                style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
-                                onClick={async () => {
-                                  try {
-                                    await applicationAPI.accept(app._id);
-                                    setApplications((prev) =>
-                                      prev.map((a) => a._id === app._id ? { ...a, status: 'accepted' } : a)
-                                    );
-                                  } catch (e) { setFormError(e.response?.data?.message || 'Failed to accept'); }
-                                }}
+                                type="button"
+                                style={{ background: 'none', border: '1px solid #d1d5db', color: '#374151', padding: '0.4rem 0.8rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}
+                                onClick={() => handleViewProfile(app)}
                               >
-                                Accept
+                                {expandedApp === app._id && expandedMode === 'profile' ? 'Hide Profile' : 'View Profile'}
                               </button>
                               <button
-                                style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
-                                onClick={async () => {
-                                  try {
-                                    await applicationAPI.reject(app._id);
-                                    setApplications((prev) =>
-                                      prev.map((a) => a._id === app._id ? { ...a, status: 'rejected' } : a)
-                                    );
-                                  } catch (e) { setFormError(e.response?.data?.message || 'Failed to reject'); }
-                                }}
+                                type="button"
+                                style={{ background: 'none', border: '1px solid #d1d5db', color: '#374151', padding: '0.4rem 0.8rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}
+                                onClick={() => handleViewMessages(app)}
                               >
-                                Reject
+                                {expandedApp === app._id && expandedMode === 'messages' ? 'Hide Messages' : 'Message'}
                               </button>
-                            </>
-                          ) : (
-                            <span style={{
-                              padding: '0.35rem 0.85rem', borderRadius: '99px', fontWeight: 700, fontSize: '0.75rem',
-                              background: app.status === 'accepted' ? '#dcfce7' : '#fee2e2',
-                              color: app.status === 'accepted' ? '#15803d' : '#b91c1c',
-                              textTransform: 'capitalize',
-                            }}>
-                              {app.status}
-                            </span>
-                          )}
+                            </div>
+                          </div>
                         </div>
+
+                        {expandedApp === app._id && (
+                          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                            {panelLoading ? (
+                              <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>Loading…</p>
+                            ) : expandedMode === 'profile' ? (
+                              profileData && (
+                                <div style={{ fontSize: '0.85rem', color: '#374151', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                  <div><strong>Name:</strong> {profileData.applicant?.name}</div>
+                                  <div><strong>Email:</strong> {profileData.applicant?.email}</div>
+                                  {profileData.applicant?.username && (
+                                    <div><strong>Username:</strong> {profileData.applicant.username}</div>
+                                  )}
+                                  {profileData.applicant?.phoneNumber && (
+                                    <div><strong>Phone:</strong> {profileData.applicant.phoneNumber}</div>
+                                  )}
+                                  <div>
+                                    <strong>KYC verified:</strong> {profileData.applicant?.kycVerified ? 'Yes' : 'No'}
+                                    {profileData.kyc && ` (latest submission: ${profileData.kyc.status})`}
+                                  </div>
+                                  <div>
+                                    <strong>Member since:</strong> {new Date(profileData.applicant?.createdAt).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              )
+                            ) : (
+                              <div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '220px', overflowY: 'auto', marginBottom: '0.75rem' }}>
+                                  {threadMessages.length === 0 ? (
+                                    <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No messages yet. Start the conversation below.</p>
+                                  ) : (
+                                    threadMessages.map((msg) => (
+                                      <div key={msg._id} style={{ fontSize: '0.85rem', color: '#374151' }}>
+                                        <strong>{msg.sender?.name || 'Unknown'}:</strong> {msg.text}
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <input
+                                    type="text"
+                                    value={messageText}
+                                    onChange={(e) => setMessageText(e.target.value)}
+                                    placeholder="Write a message…"
+                                    style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(app); }}
+                                  />
+                                  <button
+                                    type="button"
+                                    style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
+                                    onClick={() => handleSendMessage(app)}
+                                  >
+                                    Send
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

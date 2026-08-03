@@ -331,6 +331,21 @@ export const applicationAPI = {
     const response = await api.get(`/applications/owner${params}`);
     return response.data;
   },
+
+  getApplicantProfile: async (applicationId) => {
+    const response = await api.get(`/applications/${applicationId}/applicant`);
+    return response.data;
+  },
+
+  getMessages: async (applicationId) => {
+    const response = await api.get(`/applications/${applicationId}/messages`);
+    return response.data;
+  },
+
+  sendMessage: async (applicationId, text) => {
+    const response = await api.post(`/applications/${applicationId}/messages`, { text });
+    return response.data;
+  },
 };
 
 // ─── Notification API ─────────────────────────────────────────────────────────

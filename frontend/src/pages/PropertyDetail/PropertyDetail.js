@@ -10,7 +10,6 @@ import {
   getPropertyVideos,
   getVideoEmbedUrl,
 } from '../../utils/propertyHelpers';
-import { needsKycVerification } from '../../utils/kyc';
 import './PropertyDetail.css';
 
 const PENDING_STATUSES = ['pending_verification', 'pending'];
@@ -56,7 +55,7 @@ const PropertyDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { properties } = useProperties();
-  const { user, hasReviewAccess, isAdmin } = useAuth();
+  const { user, hasReviewAccess } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -146,11 +145,6 @@ const PropertyDetail = () => {
       return;
     }
 
-    if (needsKycVerification(user, isAdmin)) {
-      navigate('/kyc');
-      return;
-    }
-
     const message = window.prompt('Add a note to the owner (optional):') ?? '';
     setRenting(true);
     setErrorMessage('');
@@ -162,6 +156,10 @@ const PropertyDetail = () => {
       }));
       setSuccessMessage('Application submitted! The owner will review it shortly.');
     } catch (err) {
+      if (err.response?.data?.kycRequired) {
+        navigate('/kyc');
+        return;
+      }
       setErrorMessage(
         err.response?.data?.message || 'Failed to submit application. Please try again.'
       );

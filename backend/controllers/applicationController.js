@@ -2,6 +2,8 @@ const Room = require("../models/Room");
 const Rental = require("../models/Rental");
 const RentApplication = require("../models/RentApplication");
 const Notification = require("../models/Notification");
+const ApplicationMessage = require("../models/ApplicationMessage");
+const Kyc = require("../models/Kyc");
 
 // ─── Helper ─────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,13 @@ const applyForRoom = async (req, res) => {
   try {
     const room = await Room.findById(req.params.id);
     if (!room) return res.status(404).json({ message: "Room not found" });
+
+    if (!req.user.kycVerified) {
+      return res.status(403).json({
+        message: "Please complete KYC verification before applying to rent.",
+        kycRequired: true,
+      });
+    }
 
     // Owner cannot apply to their own listing
     if (room.createdBy?.toString() === req.user._id.toString()) {
@@ -323,6 +332,118 @@ const getOwnerApplications = async (req, res) => {
   }
 };
 
+// ─── Owner: view applicant profile ───────────────────────────────────────────
+
+/**
+ * GET /applications/:id/applicant
+ * Authenticated. Owner only. Returns the applicant's profile plus their
+ * latest KYC verification status, so the owner can vet them before deciding.
+ */
+const getApplicantProfile = async (req, res) => {
+  try {
+    const application = await RentApplication.findById(req.params.id).populate(
+      "applicant",
+      "name username email phoneNumber kycVerified createdAt"
+    );
+    if (!application) return res.status(404).json({ message: "Application not found" });
+
+    if (application.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Only the listing owner can view this applicant's profile" });
+    }
+
+    const latestKyc = await Kyc.findOne({ user: application.applicant._id })
+      .sort({ createdAt: -1 })
+      .select("status role createdAt");
+
+    return res.status(200).json({
+      applicant: application.applicant,
+      kyc: latestKyc || null,
+    });
+  } catch (error) {
+    console.error("getApplicantProfile error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// ─── Owner <-> applicant messaging ────────────────────────────────────────────
+
+/**
+ * Shared auth check: only the application's owner or applicant may access its thread.
+ */
+const canAccessApplicationThread = (application, userId) => {
+  const uid = userId.toString();
+  return application.owner.toString() === uid || application.applicant.toString() === uid;
+};
+
+/**
+ * GET /applications/:id/messages
+ * Authenticated. Owner or applicant only.
+ */
+const getApplicationMessages = async (req, res) => {
+  try {
+    const application = await RentApplication.findById(req.params.id);
+    if (!application) return res.status(404).json({ message: "Application not found" });
+
+    if (!canAccessApplicationThread(application, req.user._id)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const messages = await ApplicationMessage.find({ application: application._id })
+      .sort({ createdAt: 1 })
+      .limit(200)
+      .populate("sender", "name username email");
+
+    return res.status(200).json(messages);
+  } catch (error) {
+    console.error("getApplicationMessages error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+/**
+ * POST /applications/:id/messages
+ * Authenticated. Owner or applicant only.
+ * Body: { text: string }
+ */
+const sendApplicationMessage = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text?.trim()) return res.status(400).json({ message: "text is required" });
+
+    const application = await RentApplication.findById(req.params.id).populate("room", "title");
+    if (!application) return res.status(404).json({ message: "Application not found" });
+
+    if (!canAccessApplicationThread(application, req.user._id)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const message = await ApplicationMessage.create({
+      application: application._id,
+      sender: req.user._id,
+      text: text.trim(),
+    });
+    await message.populate("sender", "name username email");
+
+    const senderId = req.user._id.toString();
+    const recipient =
+      senderId === application.owner.toString() ? application.applicant : application.owner;
+
+    await Notification.create({
+      recipient,
+      type: "application_message",
+      application: application._id,
+      room: application.room._id,
+      fromUser: req.user._id,
+      message: `New message about "${application.room.title}"`,
+    });
+
+    return res.status(201).json(message);
+  } catch (error) {
+    console.error("sendApplicationMessage error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   applyForRoom,
   getApplicationsByRoom,
@@ -332,4 +453,7 @@ module.exports = {
   rejectApplication,
   withdrawApplication,
   getApprovedRenters,
+  getApplicantProfile,
+  getApplicationMessages,
+  sendApplicationMessage,
 };
