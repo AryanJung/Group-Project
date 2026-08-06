@@ -62,6 +62,7 @@ const PropertyDetail = () => {
 
   const [rentalStatus, setRentalStatus] = useState(null);
   const [renting, setRenting] = useState(false);
+  const [messaging, setMessaging] = useState(false);
 
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
@@ -184,6 +185,22 @@ const PropertyDetail = () => {
       );
     } finally {
       setRenting(false);
+    }
+  };
+
+  const handleMessageOwner = async () => {
+    const appId = rentalStatus?.application?._id;
+    if (!appId) return;
+    setMessaging(true);
+    setErrorMessage('');
+    try {
+      const chat = await applicationAPI.getOrCreateChat(appId);
+      const roomId = chat.room?._id || chat.room;
+      navigate(`/chat/${roomId}?chat=${chat._id}`);
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || 'Failed to open chat.');
+    } finally {
+      setMessaging(false);
     }
   };
 
@@ -426,6 +443,14 @@ const PropertyDetail = () => {
                   </button>
                   <button
                     type="button"
+                    className="btn-outline"
+                    onClick={handleMessageOwner}
+                    disabled={messaging}
+                  >
+                    {messaging ? 'Opening…' : 'Message Owner'}
+                  </button>
+                  <button
+                    type="button"
                     className="btn-outline btn-outline--danger"
                     onClick={handleWithdrawApplication}
                     disabled={renting}
@@ -437,6 +462,14 @@ const PropertyDetail = () => {
                 <>
                   <button className="btn-primary btn-primary--danger" disabled type="button">
                     Application Rejected
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={handleMessageOwner}
+                    disabled={messaging}
+                  >
+                    {messaging ? 'Opening…' : 'Message Owner'}
                   </button>
                   <button
                     type="button"
