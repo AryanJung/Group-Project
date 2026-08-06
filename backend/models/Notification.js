@@ -14,7 +14,6 @@ const notificationSchema = new mongoose.Schema(
         "new_application",
         "application_accepted",
         "application_rejected",
-        "application_message",
         "kyc_approved",
         "kyc_rejected",
         "property_approved",

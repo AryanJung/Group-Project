@@ -17,13 +17,11 @@ const Admin = () => {
   const [applications, setApplications] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
 
-  // Applicant profile / discussion thread panel (expanded inline per application)
+  // Applicant profile panel (expanded inline per application)
   const [expandedApp, setExpandedApp] = useState(null);
-  const [expandedMode, setExpandedMode] = useState(null); // 'profile' | 'messages'
   const [panelLoading, setPanelLoading] = useState(false);
   const [profileData, setProfileData] = useState(null);
-  const [threadMessages, setThreadMessages] = useState([]);
-  const [messageText, setMessageText] = useState('');
+  const [messagingApp, setMessagingApp] = useState(null); // applicationId currently opening a chat
 
   // Owner's own listings
   const [myRooms, setMyRooms] = useState([]);
@@ -96,21 +94,13 @@ const Admin = () => {
     }
   }, [activeTab, applicationsRoomId, isOwner]);
 
-  const closeApplicationPanel = () => {
-    setExpandedApp(null);
-    setExpandedMode(null);
-    setProfileData(null);
-    setThreadMessages([]);
-    setMessageText('');
-  };
-
   const handleViewProfile = async (app) => {
-    if (expandedApp === app._id && expandedMode === 'profile') {
-      closeApplicationPanel();
+    if (expandedApp === app._id) {
+      setExpandedApp(null);
+      setProfileData(null);
       return;
     }
     setExpandedApp(app._id);
-    setExpandedMode('profile');
     setPanelLoading(true);
     try {
       const data = await applicationAPI.getApplicantProfile(app._id);
@@ -122,32 +112,17 @@ const Admin = () => {
     }
   };
 
-  const handleViewMessages = async (app) => {
-    if (expandedApp === app._id && expandedMode === 'messages') {
-      closeApplicationPanel();
-      return;
-    }
-    setExpandedApp(app._id);
-    setExpandedMode('messages');
-    setPanelLoading(true);
+  const handleMessageApplicant = async (app) => {
+    setMessagingApp(app._id);
+    setFormError('');
     try {
-      const data = await applicationAPI.getMessages(app._id);
-      setThreadMessages(data);
+      const chat = await applicationAPI.getOrCreateChat(app._id);
+      const roomId = chat.room?._id || chat.room;
+      navigate(`/chat/${roomId}?chat=${chat._id}`);
     } catch (e) {
-      setFormError(e.response?.data?.message || 'Failed to load messages');
+      setFormError(e.response?.data?.message || 'Failed to open chat');
     } finally {
-      setPanelLoading(false);
-    }
-  };
-
-  const handleSendMessage = async (app) => {
-    if (!messageText.trim()) return;
-    try {
-      const sent = await applicationAPI.sendMessage(app._id, messageText.trim());
-      setThreadMessages((prev) => [...prev, sent]);
-      setMessageText('');
-    } catch (e) {
-      setFormError(e.response?.data?.message || 'Failed to send message');
+      setMessagingApp(null);
     }
   };
 
@@ -682,14 +657,15 @@ const Admin = () => {
                                 style={{ background: 'none', border: '1px solid #d1d5db', color: '#374151', padding: '0.4rem 0.8rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}
                                 onClick={() => handleViewProfile(app)}
                               >
-                                {expandedApp === app._id && expandedMode === 'profile' ? 'Hide Profile' : 'View Profile'}
+                                {expandedApp === app._id ? 'Hide Profile' : 'View Profile'}
                               </button>
                               <button
                                 type="button"
                                 style={{ background: 'none', border: '1px solid #d1d5db', color: '#374151', padding: '0.4rem 0.8rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}
-                                onClick={() => handleViewMessages(app)}
+                                onClick={() => handleMessageApplicant(app)}
+                                disabled={messagingApp === app._id}
                               >
-                                {expandedApp === app._id && expandedMode === 'messages' ? 'Hide Messages' : 'Message'}
+                                {messagingApp === app._id ? 'Opening…' : 'Message'}
                               </button>
                             </div>
                           </div>
@@ -699,7 +675,7 @@ const Admin = () => {
                           <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                             {panelLoading ? (
                               <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>Loading…</p>
-                            ) : expandedMode === 'profile' ? (
+                            ) : (
                               profileData && (
                                 <div style={{ fontSize: '0.85rem', color: '#374151', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                   <div><strong>Name:</strong> {profileData.applicant?.name}</div>
@@ -719,37 +695,6 @@ const Admin = () => {
                                   </div>
                                 </div>
                               )
-                            ) : (
-                              <div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '220px', overflowY: 'auto', marginBottom: '0.75rem' }}>
-                                  {threadMessages.length === 0 ? (
-                                    <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No messages yet. Start the conversation below.</p>
-                                  ) : (
-                                    threadMessages.map((msg) => (
-                                      <div key={msg._id} style={{ fontSize: '0.85rem', color: '#374151' }}>
-                                        <strong>{msg.sender?.name || 'Unknown'}:</strong> {msg.text}
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                  <input
-                                    type="text"
-                                    value={messageText}
-                                    onChange={(e) => setMessageText(e.target.value)}
-                                    placeholder="Write a message…"
-                                    style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(app); }}
-                                  />
-                                  <button
-                                    type="button"
-                                    style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
-                                    onClick={() => handleSendMessage(app)}
-                                  >
-                                    Send
-                                  </button>
-                                </div>
-                              </div>
                             )}
                           </div>
                         )}

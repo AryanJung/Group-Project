@@ -2,7 +2,7 @@ const Room = require("../models/Room");
 const Rental = require("../models/Rental");
 const RentApplication = require("../models/RentApplication");
 const Notification = require("../models/Notification");
-const ApplicationMessage = require("../models/ApplicationMessage");
+const GroupChat = require("../models/GroupChat");
 const Kyc = require("../models/Kyc");
 
 // ─── Helper ─────────────────────────────────────────────────────────────────
@@ -368,78 +368,50 @@ const getApplicantProfile = async (req, res) => {
 // ─── Owner <-> applicant messaging ────────────────────────────────────────────
 
 /**
- * Shared auth check: only the application's owner or applicant may access its thread.
- */
-const canAccessApplicationThread = (application, userId) => {
-  const uid = userId.toString();
-  return application.owner.toString() === uid || application.applicant.toString() === uid;
-};
-
-/**
- * GET /applications/:id/messages
+ * POST /applications/:id/chat
  * Authenticated. Owner or applicant only.
+ * Finds or creates the private GroupChat between this application's owner and
+ * applicant, so pre-decision discussion can happen in the same chat UI used
+ * for accepted renters (GroupChat/Chat.js) instead of a separate system.
+ * Bypasses the Rental-membership check in createGroupChat since the
+ * applicant is not an accepted renter yet.
  */
-const getApplicationMessages = async (req, res) => {
+const getOrCreateApplicationChat = async (req, res) => {
   try {
-    const application = await RentApplication.findById(req.params.id);
+    const application = await RentApplication.findById(req.params.id)
+      .populate("room", "title")
+      .populate("applicant", "name");
     if (!application) return res.status(404).json({ message: "Application not found" });
 
-    if (!canAccessApplicationThread(application, req.user._id)) {
+    const uid = req.user._id.toString();
+    if (application.owner.toString() !== uid && application.applicant._id.toString() !== uid) {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const messages = await ApplicationMessage.find({ application: application._id })
-      .sort({ createdAt: 1 })
-      .limit(200)
-      .populate("sender", "name username email");
-
-    return res.status(200).json(messages);
-  } catch (error) {
-    console.error("getApplicationMessages error:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-/**
- * POST /applications/:id/messages
- * Authenticated. Owner or applicant only.
- * Body: { text: string }
- */
-const sendApplicationMessage = async (req, res) => {
-  try {
-    const { text } = req.body;
-    if (!text?.trim()) return res.status(400).json({ message: "text is required" });
-
-    const application = await RentApplication.findById(req.params.id).populate("room", "title");
-    if (!application) return res.status(404).json({ message: "Application not found" });
-
-    if (!canAccessApplicationThread(application, req.user._id)) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const message = await ApplicationMessage.create({
-      application: application._id,
-      sender: req.user._id,
-      text: text.trim(),
-    });
-    await message.populate("sender", "name username email");
-
-    const senderId = req.user._id.toString();
-    const recipient =
-      senderId === application.owner.toString() ? application.applicant : application.owner;
-
-    await Notification.create({
-      recipient,
-      type: "application_message",
-      application: application._id,
+    let chat = await GroupChat.findOne({
       room: application.room._id,
-      fromUser: req.user._id,
-      message: `New message about "${application.room.title}"`,
+      owner: application.owner,
+      members: application.applicant._id,
     });
 
-    return res.status(201).json(message);
+    if (!chat) {
+      chat = await GroupChat.create({
+        name: `${application.applicant.name} · ${application.room.title}`,
+        room: application.room._id,
+        owner: application.owner,
+        members: [application.applicant._id],
+      });
+    }
+
+    const populated = await chat.populate([
+      { path: "room", select: "title location image" },
+      { path: "owner", select: "name username email" },
+      { path: "members", select: "name username email" },
+    ]);
+
+    return res.status(200).json(populated);
   } catch (error) {
-    console.error("sendApplicationMessage error:", error);
+    console.error("getOrCreateApplicationChat error:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -454,6 +426,5 @@ module.exports = {
   withdrawApplication,
   getApprovedRenters,
   getApplicantProfile,
-  getApplicationMessages,
-  sendApplicationMessage,
+  getOrCreateApplicationChat,
 };

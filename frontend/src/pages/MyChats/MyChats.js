@@ -107,7 +107,7 @@ const MyChats = () => {
                   <button
                     type="button"
                     className="my-chats-item"
-                    onClick={() => navigate(`/chat/${roomId}`)}
+                    onClick={() => navigate(`/chat/${roomId}?chat=${chat._id}`)}
                   >
                     <div className="my-chats-avatar" aria-hidden="true">
                       {roomTitle.charAt(0).toUpperCase()}

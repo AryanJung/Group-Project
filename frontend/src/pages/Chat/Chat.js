@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { adminAPI, groupChatAPI, userAPI } from '../../services/api';
 import './Chat.css';
@@ -43,7 +43,11 @@ const EmptyConversationIcon = () => (
 const Chat = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  // A specific chat to open (e.g. a private pre-acceptance applicant thread)
+  // rather than the room's default group chat. Falls back to getByRoom(id).
+  const requestedChatId = new URLSearchParams(location.search).get('chat');
   // Boolean, not the token string: AuthContext refreshes the session every 10s
   // and the backend re-signs a new JWT (fresh `iat`) each time, so `user.token`
   // changes on every refresh. Keying `refreshChat` on that value would re-run
@@ -170,7 +174,7 @@ const Chat = () => {
     try {
       const [mine, chatDoc] = await Promise.all([
         groupChatAPI.getMine().catch(() => []),
-        groupChatAPI.getByRoom(id),
+        requestedChatId ? groupChatAPI.getById(requestedChatId) : groupChatAPI.getByRoom(id),
       ]);
       setChats(mine);
       setChat(chatDoc);
@@ -191,7 +195,7 @@ const Chat = () => {
     } finally {
       setIsConnecting(false);
     }
-  }, [fetchMessages, id, navigate, isAuthenticated]);
+  }, [fetchMessages, id, navigate, isAuthenticated, requestedChatId]);
 
   useEffect(() => {
     refreshChat();
@@ -338,8 +342,9 @@ const Chat = () => {
                   {group.map((item) => {
                     const roomId = item.room?._id || item.room;
                     const title = item.name || item.room?.title || 'Group Chat';
-                    const active = String(roomId) === String(id);
-                    const online = (item.members?.length || 0) > 1;
+                    const active = item._id === chat?._id;
+                    const memberTotal = item.members?.length || 0;
+                    const online = memberTotal > 1;
 
                     return (
                       <button
@@ -347,7 +352,7 @@ const Chat = () => {
                         key={item._id}
                         className={`chat-list-item ${active ? 'chat-list-item--active' : ''}`}
                         onClick={() => {
-                          navigate(`/chat/${roomId}`);
+                          navigate(`/chat/${roomId}?chat=${item._id}`);
                           setSidebarOpen(false);
                         }}
                       >
@@ -357,7 +362,7 @@ const Chat = () => {
                         </span>
                         <span className="chat-list-copy">
                           <strong>{title}</strong>
-                          <small>{item.room?.location || `${item.members?.length || 0} members`}</small>
+                          <small>{memberTotal <= 1 ? 'Direct message' : `${memberTotal} members`}</small>
                         </span>
                         {active && <span className="chat-unread-badge">New</span>}
                       </button>
@@ -389,6 +394,9 @@ const Chat = () => {
 
             {status === true && (
               <div className="chat-header-actions">
+                <span className="chat-role-pill" style={{ background: '#ede9fe', color: '#6d28d9' }}>
+                  {memberCount <= 1 ? 'Direct Message' : 'Group Chat'}
+                </span>
                 <span className={`chat-role-pill chat-role-pill--${myRole.toLowerCase()}`}>{myRole}</span>
                 <button type="button" className="chat-info-btn" onClick={() => setGroupPanelOpen(true)}>
                   Info

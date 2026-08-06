@@ -337,13 +337,8 @@ export const applicationAPI = {
     return response.data;
   },
 
-  getMessages: async (applicationId) => {
-    const response = await api.get(`/applications/${applicationId}/messages`);
-    return response.data;
-  },
-
-  sendMessage: async (applicationId, text) => {
-    const response = await api.post(`/applications/${applicationId}/messages`, { text });
+  getOrCreateChat: async (applicationId) => {
+    const response = await api.post(`/applications/${applicationId}/chat`);
     return response.data;
   },
 };

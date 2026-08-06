@@ -6,11 +6,14 @@ const User = require("../models/User");
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
+// Accepts either a raw ObjectId ref or a populated User doc for owner/members.
+const idOf = (value) => String(value?._id || value);
+
 const hasChatAccess = (chat, userId) => {
-  const uid = userId.toString();
+  const uid = String(userId);
   return (
-    chat.owner.toString() === uid ||
-    chat.members.some((m) => m.toString() === uid)
+    idOf(chat.owner) === uid ||
+    chat.members.some((m) => idOf(m) === uid)
   );
 };
 
