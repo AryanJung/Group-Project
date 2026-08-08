@@ -1,455 +1,257 @@
-/* ── Floating bubble button ── */
-.cw-root {
-  position: fixed;
-  bottom: 28px;
-  right: 28px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
-}
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { chatbotAPI } from '../../services/api';
+import { getPropertyImages } from '../../utils/propertyHelpers';
+import './ChatbotWidget.css';
 
-.cw-bubble-btn {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
-  color: #fff;
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.45);
-  transition: transform 0.2s, box-shadow 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
+const WELCOME = {
+  id: 0,
+  role: 'bot',
+  text: "Hi! I'm your AI rental assistant.\nAsk me anything about renting rooms, deposits, leases, or this platform.",
+  ts: new Date(),
+};
 
-.cw-bubble-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 28px rgba(255, 107, 53, 0.55);
-}
+const ChatbotWidget = () => {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([WELCOME]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const historyRef = useRef([]);
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
-.cw-bubble-btn--open {
-  background: linear-gradient(135deg, #555, #333);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
+  useEffect(() => {
+    if (open) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      inputRef.current?.focus();
+    }
+  }, [messages, open]);
 
-/* ── Chat panel ── */
-.cw-panel {
-  width: 340px;
-  height: 620px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: cw-slide-up 0.22s ease;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s ease;
-}
+  const send = async (e) => {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || loading) return;
 
-.cw-panel.cw-panel--expanded {
-  width: 700px;
-}
+    setInput('');
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), role: 'user', text, ts: new Date() },
+    ]);
+    setLoading(true);
 
-@keyframes cw-slide-up {
-  from { opacity: 0; transform: translateY(16px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)   scale(1); }
-}
+    const snapshot = [...historyRef.current];
 
-/* ── Header ── */
-.cw-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
-  flex-shrink: 0;
-}
+    try {
+      const { reply, listings } = await chatbotAPI.sendMessage(text, snapshot);
+      historyRef.current = [
+        ...snapshot,
+        { role: 'user', content: text },
+        { role: 'assistant', content: reply },
+      ];
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, role: 'bot', text: reply, listings, ts: new Date() },
+      ]);
+    } catch (err) {
+      const errText =
+        err.response?.data?.message ||
+        'AI assistant is unavailable. Make sure the backend and Ollama are running.';
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, role: 'bot', text: errText, ts: new Date() },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-.cw-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+  const fmt = (ts) =>
+    ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-.cw-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.16);
-}
+  const fmtPrice = (price) =>
+    typeof price === 'number' ? `Rs ${price.toLocaleString()}/mo` : price;
 
-.cw-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-}
+  return (
+    <div className="cw-root">
+      {/* Chat panel */}
+      {open && (
+        <div className="cw-panel">
+          <div className="cw-header">
+            <div className="cw-header-left">
+              <span className="cw-avatar" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-6H10v6H5a1 1 0 01-1-1v-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <div>
+                <p className="cw-title">AI Rental Assistant</p>
+                <p className="cw-subtitle">Powered by local AI</p>
+              </div>
+            </div>
+            <button
+              className="cw-close"
+              onClick={() => setOpen(false)}
+              aria-label="Close chat"
+            >
+              x
+            </button>
+          </div>
 
-.cw-subtitle {
-  margin: 0;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.8);
-}
+          <div className="cw-messages">
+            {messages.map((m) => (
+              <div key={m.id} className={`cw-msg cw-msg--${m.role}`}>
+                <div className="cw-bubble">
+                  {m.text.split('\n').map((line, i) => (
+                    <span key={i}>
+                      {line}
+                      {i < m.text.split('\n').length - 1 && <br />}
+                    </span>
+                  ))}
+                </div>
 
-.cw-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+                {m.listings?.length > 1 && (
+                  <div className="cw-compare-wrap">
+                    <table className="cw-compare-table">
+                      <thead>
+                        <tr>
+                          <th className="cw-compare-label-col" />
+                          {m.listings.map((room) => {
+                            const [thumb] = getPropertyImages(room);
+                            return (
+                              <th key={room._id}>
+                                <Link to={`/property/${room._id}`} className="cw-compare-head">
+                                  {thumb ? (
+                                    <img src={thumb} alt="" />
+                                  ) : (
+                                    <span className="cw-compare-fallback">
+                                      {room.image || '🏠'}
+                                    </span>
+                                  )}
+                                  <span className="cw-compare-title">{room.title}</span>
+                                </Link>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <th className="cw-compare-label-col">Price</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id} className="cw-compare-price">
+                              {fmtPrice(room.price)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Location</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.location || '—'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Bedrooms</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.bedrooms ?? '—'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Bathrooms</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.bathrooms ?? '—'}</td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <th className="cw-compare-label-col">Area</th>
+                          {m.listings.map((room) => (
+                            <td key={room._id}>{room.area && room.area !== 'N/A' ? room.area : '—'}</td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-.cw-toggle-size {
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 50%;
-  transition: background 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+                {m.listings?.length === 1 && (
+                  <div className="cw-msg-listings">
+                    {m.listings.map((room) => {
+                      const [thumb] = getPropertyImages(room);
+                      return (
+                        <Link
+                          to={`/property/${room._id}`}
+                          className="cw-msg-listing-card"
+                          key={room._id}
+                        >
+                          {thumb ? (
+                            <img src={thumb} alt="" />
+                          ) : (
+                            <span className="cw-msg-listing-fallback">
+                              {room.image || '🏠'}
+                            </span>
+                          )}
+                          <div>
+                            <h4>{room.title}</h4>
+                            <p className="cw-msg-listing-location">{room.location}</p>
+                            <p className="cw-msg-listing-price">{fmtPrice(room.price)}</p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
 
-.cw-toggle-size:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+                <span className="cw-time">{fmt(m.ts)}</span>
+              </div>
+            ))}
 
-.cw-close {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 50%;
-  transition: background 0.15s;
-}
+            {loading && (
+              <div className="cw-msg cw-msg--bot">
+                <div className="cw-bubble cw-bubble--typing">
+                  <span /><span /><span />
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
 
-.cw-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+          <form className="cw-form" onSubmit={send}>
+            <input
+              ref={inputRef}
+              className="cw-input"
+              type="text"
+              placeholder="Ask anything…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={loading}
+            />
+            <button
+              type="submit"
+              className="cw-send"
+              disabled={loading || !input.trim()}
+              aria-label="Send"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </form>
+        </div>
+      )}
 
-/* ── Messages ── */
-.cw-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: #f7f8fc;
-}
+      {/* Floating bubble */}
+      <button
+        className={`cw-bubble-btn ${open ? 'cw-bubble-btn--open' : ''}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Open AI chat assistant"
+      >
+        {open ? 'x' : (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M21 15a3 3 0 01-3 3H8l-5 4V6a3 3 0 013-3h12a3 3 0 013 3v9z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+};
 
-.cw-messages::-webkit-scrollbar { width: 4px; }
-.cw-messages::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
-
-.cw-msg {
-  display: flex;
-  flex-direction: column;
-  max-width: 85%;
-}
-
-.cw-msg--user {
-  align-self: flex-end;
-  align-items: flex-end;
-}
-
-.cw-msg--bot {
-  align-self: flex-start;
-  align-items: flex-start;
-}
-
-.cw-bubble {
-  padding: 9px 13px;
-  border-radius: 14px;
-  font-size: 13.5px;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.cw-msg--user .cw-bubble {
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
-  color: #fff;
-  border-bottom-right-radius: 4px;
-}
-
-.cw-msg--bot .cw-bubble {
-  background: #fff;
-  color: #222;
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-
-.cw-time {
-  font-size: 10px;
-  color: #aaa;
-  margin-top: 3px;
-  padding: 0 3px;
-}
-
-/* ── Real listing cards returned inline with a bot reply ── */
-.cw-msg-listings {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
-  width: 100%;
-}
-
-.cw-msg-listing-card {
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  gap: 8px;
-  align-items: center;
-  padding: 6px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #fff;
-  text-decoration: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  transition: border-color 0.15s, transform 0.15s;
-}
-
-.cw-msg-listing-card:hover {
-  border-color: #f7931e;
-  transform: translateY(-1px);
-}
-
-.cw-msg-listing-card img {
-  width: 52px;
-  height: 52px;
-  border-radius: 7px;
-  object-fit: cover;
-  display: block;
-}
-
-.cw-msg-listing-fallback {
-  width: 52px;
-  height: 52px;
-  border-radius: 7px;
-  background: #fff7ed;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-}
-
-.cw-msg-listing-card h4 {
-  margin: 0;
-  color: #111827;
-  font-size: 11.5px;
-  font-weight: 800;
-  line-height: 1.25;
-}
-
-.cw-msg-listing-location {
-  margin: 2px 0 0;
-  color: #6b7280;
-  font-size: 10px;
-}
-
-.cw-msg-listing-price {
-  margin: 2px 0 0;
-  color: #f97316;
-  font-size: 10.5px;
-  font-weight: 800;
-}
-
-/* ── Comparison table for multiple listing matches ── */
-.cw-compare-wrap {
-  width: 100%;
-  max-width: 100%;
-  margin: 12px 0;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.cw-compare-table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-  font-size: clamp(10px, 2.7vw, 13px);
-  color: #374151;
-}
-
-.cw-compare-table th,
-.cw-compare-table td {
-  min-width: 0;
-  padding: 8px 5px;
-  text-align: left;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  border-bottom: 1px solid #edf2f7;
-}
-
-.cw-compare-table tbody tr:last-child th,
-.cw-compare-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.cw-compare-label-col {
-  width: 16%;
-  background: #f8fafc;
-  color: #475569;
-  font-weight: 700;
-  border-right: 1px solid #e2e8f0;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.02);
-}
-
-.cw-compare-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-  text-decoration: none;
-  white-space: normal;
-  transition: transform 0.2s ease;
-}
-
-.cw-compare-head:hover {
-  transform: translateY(-2px);
-}
-
-.cw-compare-head img {
-  width: min(100%, 72px);
-  aspect-ratio: 1.4;
-  height: auto;
-  border-radius: 8px;
-  object-fit: cover;
-  display: block;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-.cw-compare-fallback {
-  width: min(100%, 72px);
-  aspect-ratio: 1.4;
-  height: auto;
-  border-radius: 8px;
-  background: #ffedd5;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-.cw-compare-title {
-  color: #1f2937;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.3;
-  text-align: center;
-  transition: color 0.15s ease;
-}
-
-.cw-compare-head:hover .cw-compare-title {
-  color: #ff6b35;
-}
-
-.cw-compare-price {
-  color: #f97316;
-  font-weight: 800;
-  font-size: 13.5px;
-}
-
-/* ── Typing indicator ── */
-.cw-bubble--typing {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  padding: 12px 16px;
-}
-
-.cw-bubble--typing span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #bbb;
-  animation: cw-bounce 1.2s infinite ease-in-out;
-}
-
-.cw-bubble--typing span:nth-child(1) { animation-delay: 0s; }
-.cw-bubble--typing span:nth-child(2) { animation-delay: 0.18s; }
-.cw-bubble--typing span:nth-child(3) { animation-delay: 0.36s; }
-
-@keyframes cw-bounce {
-  0%, 80%, 100% { transform: translateY(0);   background: #ccc; }
-  40%           { transform: translateY(-6px); background: #f7931e; }
-}
-
-/* ── Input form ── */
-.cw-form {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-top: 1px solid #eee;
-  background: #fff;
-  flex-shrink: 0;
-}
-
-.cw-input {
-  flex: 1;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 20px;
-  padding: 8px 14px;
-  font-size: 13.5px;
-  outline: none;
-  transition: border-color 0.2s;
-  background: #fafafa;
-}
-
-.cw-input:focus {
-  border-color: #f7931e;
-  background: #fff;
-}
-
-.cw-input:disabled {
-  opacity: 0.6;
-}
-
-.cw-send {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #ff6b35, #f7931e);
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s, transform 0.15s;
-  flex-shrink: 0;
-}
-
-.cw-send:hover:not(:disabled) { transform: scale(1.1); }
-.cw-send:disabled { opacity: 0.4; cursor: default; }
-
-@media (max-width: 768px) {
-  .cw-root {
-    right: 14px;
-    bottom: 14px;
-  }
-
-  .cw-panel {
-    width: calc(100vw - 28px);
-    height: min(620px, calc(100vh - 96px));
-  }
-
-  .cw-panel.cw-panel--expanded {
-    width: calc(100vw - 28px);
-  }
-}
+export default ChatbotWidget;
