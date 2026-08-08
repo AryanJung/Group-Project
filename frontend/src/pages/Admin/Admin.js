@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { adminAPI, rentalAPI, applicationAPI } from '../../services/api';
+import { adminAPI, rentalAPI, applicationAPI, visitAPI, agreementAPI } from '../../services/api';
+import AgreementModal from '../../components/AgreementModal/AgreementModal';
+import AgreementsList from '../Agreements/AgreementsList';
 import { needsKycVerification } from '../../utils/kyc';
 import MapPicker from './MapPicker';
 import './Admin.css';
@@ -22,6 +24,14 @@ const Admin = () => {
   const [panelLoading, setPanelLoading] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [messagingApp, setMessagingApp] = useState(null); // applicationId currently opening a chat
+  const [visitsByApp, setVisitsByApp] = useState({});
+  const [agreementsByApp, setAgreementsByApp] = useState({});
+
+  const canRejectApplication = (app) => {
+    if (!app || app.status === 'rejected' || app.status === 'accepted') return false;
+    const agreements = agreementsByApp[app._id] || [];
+    return !agreements.some((agreement) => ['final_pending', 'executed', 'locked'].includes(agreement.status));
+  };
 
   // Owner's own listings
   const [myRooms, setMyRooms] = useState([]);
@@ -37,6 +47,10 @@ const Admin = () => {
   const [editingProperty, setEditingProperty] = useState(null);
   const [formError, setFormError] = useState('');
   const formRef = useRef(null);
+
+  // Agreement modal state
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [agreementApp, setAgreementApp] = useState(null);
 
   const emptyForm = {
     title: '',
@@ -69,6 +83,11 @@ const Admin = () => {
     if (!isAuthenticated) navigate('/');
   }, [isAuthenticated, navigate]);
 
+  // expose agreementAPI to modal (legacy connector)
+  useEffect(() => {
+    window.agreementAPI = agreementAPI;
+  }, []);
+
   // Load owner listings when Houses tab is opened
   useEffect(() => {
     if (activeTab === 'houses' && isOwner) {
@@ -96,6 +115,30 @@ const Admin = () => {
     }
   }, [activeTab, applicationsRoomId, isOwner]);
 
+  useEffect(() => {
+    const loadAgreementsForApplications = async () => {
+      const appsToLoad = applications.filter((app) => agreementsByApp[app._id] === undefined);
+      if (appsToLoad.length === 0) return;
+
+      const loaded = {};
+      await Promise.allSettled(
+        appsToLoad.map(async (app) => {
+          try {
+            const ags = await agreementAPI.getByApplication(app._id);
+            loaded[app._id] = ags;
+          } catch (err) {
+            loaded[app._id] = [];
+          }
+        })
+      );
+      setAgreementsByApp((prev) => ({ ...prev, ...loaded }));
+    };
+
+    if (activeTab === 'applications' && isOwner && applications.length > 0) {
+      loadAgreementsForApplications();
+    }
+  }, [activeTab, isOwner, applications, agreementsByApp]);
+
   const handleViewProfile = async (app) => {
     if (expandedApp === app._id) {
       setExpandedApp(null);
@@ -107,6 +150,23 @@ const Admin = () => {
     try {
       const data = await applicationAPI.getApplicantProfile(app._id);
       setProfileData(data);
+      // load visit requests for this application
+      try {
+        const visits = await visitAPI.getVisitsByApplication(app._id);
+        setVisitsByApp((prev) => ({ ...prev, [app._id]: visits }));
+      } catch (ve) {
+        console.error('Failed to load visits for application', ve);
+        setVisitsByApp((prev) => ({ ...prev, [app._id]: [] }));
+      }
+
+      // load agreements related to this application
+      try {
+        const ags = await agreementAPI.getByApplication(app._id);
+        setAgreementsByApp((prev) => ({ ...prev, [app._id]: ags }));
+      } catch (ae) {
+        console.error('Failed to load agreements for application', ae);
+        setAgreementsByApp((prev) => ({ ...prev, [app._id]: [] }));
+      }
     } catch (e) {
       setFormError(e.response?.data?.message || 'Failed to load applicant profile');
     } finally {
@@ -316,9 +376,14 @@ const Admin = () => {
             )}
 
             {!isOwner && (
-              <button className={activeTab === 'rentals' ? 'active' : ''} onClick={() => setActiveTab('rentals')}>
-                My Rentals
-              </button>
+              <>
+                <button className={activeTab === 'rentals' ? 'active' : ''} onClick={() => setActiveTab('rentals')}>
+                  My Rentals
+                </button>
+                <button className={activeTab === 'agreements' ? 'active' : ''} onClick={() => setActiveTab('agreements')}>
+                  Rental Agreements
+                </button>
+              </>
             )}
 
             <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => setActiveTab('chat')}>
@@ -678,38 +743,58 @@ const Admin = () => {
                                     style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
                                     onClick={async () => {
                                       try {
-                                        await applicationAPI.accept(app._id);
+                                        const result = await applicationAPI.accept(app._id);
+                                        const updatedApp = result?.application || result;
                                         setApplications((prev) =>
-                                          prev.map((a) => a._id === app._id ? { ...a, status: 'accepted' } : a)
+                                          prev.map((a) => (a._id === app._id ? updatedApp : a))
                                         );
                                       } catch (e) { setFormError(e.response?.data?.message || 'Failed to accept'); }
                                     }}
                                   >
                                     Accept
                                   </button>
-                                  <button
-                                    style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
-                                    onClick={async () => {
-                                      try {
-                                        await applicationAPI.reject(app._id);
-                                        setApplications((prev) =>
-                                          prev.map((a) => a._id === app._id ? { ...a, status: 'rejected' } : a)
-                                        );
-                                      } catch (e) { setFormError(e.response?.data?.message || 'Failed to reject'); }
-                                    }}
-                                  >
-                                    Reject
-                                  </button>
+                                  {canRejectApplication(app) && (
+                                    <button
+                                      style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}
+                                      onClick={async () => {
+                                        try {
+                                          const updatedApp = await applicationAPI.reject(app._id);
+                                          setApplications((prev) =>
+                                            prev.map((a) => (a._id === app._id ? updatedApp : a))
+                                          );
+                                        } catch (e) { setFormError(e.response?.data?.message || 'Failed to reject'); }
+                                      }}
+                                    >
+                                      Reject
+                                    </button>
+                                  )}
                                 </>
                               ) : (
-                                <span style={{
-                                  padding: '0.35rem 0.85rem', borderRadius: '99px', fontWeight: 700, fontSize: '0.75rem',
-                                  background: app.status === 'accepted' ? '#dcfce7' : '#fee2e2',
-                                  color: app.status === 'accepted' ? '#15803d' : '#b91c1c',
-                                  textTransform: 'capitalize',
-                                }}>
-                                  {app.status}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <span style={{
+                                    padding: '0.35rem 0.85rem', borderRadius: '99px', fontWeight: 700, fontSize: '0.75rem',
+                                    background: app.status === 'accepted' ? '#dcfce7' : app.status === 'rejected' ? '#fee2e2' : '#f8fafc',
+                                    color: app.status === 'accepted' ? '#15803d' : app.status === 'rejected' ? '#b91c1c' : '#334155',
+                                    textTransform: 'capitalize',
+                                  }}>
+                                    {app.status}
+                                  </span>
+                                  {canRejectApplication(app) && (
+                                    <button
+                                      style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}
+                                      onClick={async () => {
+                                        try {
+                                          const updatedApp = await applicationAPI.reject(app._id);
+                                          setApplications((prev) =>
+                                            prev.map((a) => (a._id === app._id ? updatedApp : a))
+                                          );
+                                        } catch (e) { setFormError(e.response?.data?.message || 'Failed to reject'); }
+                                      }}
+                                    >
+                                      Reject
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -728,6 +813,15 @@ const Admin = () => {
                               >
                                 {messagingApp === app._id ? 'Opening…' : 'Message'}
                               </button>
+                              {(app.status === 'both_agree_to_proceed' || app.status === 'visit_completed') && !(agreementsByApp[app._id]?.length > 0) && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setAgreementApp(app); setShowAgreementModal(true); }}
+                                  style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '0.45rem 0.85rem', borderRadius: '7px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                  Create Rental Agreement
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -738,6 +832,7 @@ const Admin = () => {
                               <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>Loading…</p>
                             ) : (
                               profileData && (
+                                <>
                                 <div style={{ fontSize: '0.85rem', color: '#374151', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                   <div><strong>Name:</strong> {profileData.applicant?.name}</div>
                                   <div><strong>Email:</strong> {profileData.applicant?.email}</div>
@@ -755,6 +850,94 @@ const Admin = () => {
                                     <strong>Member since:</strong> {new Date(profileData.applicant?.createdAt).toLocaleDateString()}
                                   </div>
                                 </div>
+
+                                {/* Visit requests for this application */}
+                                {visitsByApp[app._id] && visitsByApp[app._id].length > 0 && (
+                                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0' }}>Visit Requests</h4>
+                                    {visitsByApp[app._id].map((visit) => (
+                                      <div key={visit._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px dashed #e5e7eb' }}>
+                                        <div style={{ fontSize: '0.85rem' }}>
+                                          <div><strong>Requested:</strong> {visit.proposedAt ? new Date(visit.proposedAt).toLocaleString() : 'Not specified'}</div>
+                                          <div><strong>Confirmed:</strong> {visit.confirmedAt ? new Date(visit.confirmedAt).toLocaleString() : 'Not yet'}</div>
+                                          <div style={{ color: '#6b7280', fontSize: '0.8rem' }}><strong>Status:</strong> {visit.status}</div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                          {visit.status === 'requested' && (
+                                            <>
+                                              <button
+                                                type="button"
+                                                onClick={async () => {
+                                                  try {
+                                                    const confirmedAt = visit.proposedAt || new Date().toISOString();
+                                                    const updated = await visitAPI.confirmVisit(visit._id, confirmedAt);
+                                                    setVisitsByApp((prev) => ({ ...prev, [app._id]: prev[app._id].map(v => v._id === visit._id ? updated : v) }));
+                                                    setApplications((prev) => prev.map(a => a._id === app._id ? { ...a, status: 'visit_scheduled' } : a));
+                                                  } catch (e) { setFormError(e.response?.data?.message || 'Failed to confirm visit'); }
+                                                }}
+                                                style={{ background: '#10b981', color: '#fff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer' }}
+                                              >
+                                                Confirm
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={async () => {
+                                                  try {
+                                                    const updated = await visitAPI.rejectVisit(visit._id);
+                                                    setVisitsByApp((prev) => ({ ...prev, [app._id]: prev[app._id].map(v => v._id === visit._id ? updated : v) }));
+                                                    setApplications((prev) => prev.map(a => a._id === app._id ? { ...a, status: 'selected' } : a));
+                                                  } catch (e) { setFormError(e.response?.data?.message || 'Failed to reject visit'); }
+                                                }}
+                                                style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer' }}
+                                              >
+                                                Reject
+                                              </button>
+                                            </>
+                                          )}
+                                          {visit.status === 'landlord_confirmed' && (
+                                            <button
+                                              type="button"
+                                              onClick={async () => {
+                                                try {
+                                                  const updated = await visitAPI.completeVisit(visit._id, 'proceed');
+                                                  setVisitsByApp((prev) => ({ ...prev, [app._id]: prev[app._id].map(v => v._id === visit._id ? updated : v) }));
+                                                  setApplications((prev) => prev.map(a => a._id === app._id ? { ...a, status: 'visit_completed' } : a));
+                                                } catch (e) {
+                                                  setFormError(e.response?.data?.message || 'Failed to mark visit as completed');
+                                                }
+                                              }}
+                                              style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer' }}
+                                            >
+                                              Mark as Visited
+                                            </button>
+                                          )}
+                                          {visit.status !== 'requested' && visit.status !== 'landlord_confirmed' && (
+                                            <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>No actions</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {agreementsByApp[app._id] && agreementsByApp[app._id].length > 0 && (
+                                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0' }}>Agreements</h4>
+                                    {agreementsByApp[app._id].map((ag) => (
+                                      <div key={ag._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px dashed #e5e7eb' }}>
+                                        <div style={{ fontSize: '0.85rem' }}>
+                                          <div><strong>ID:</strong> {ag.agreementId}</div>
+                                          <div><strong>Status:</strong> {ag.status}</div>
+                                          <div style={{ color: '#6b7280', fontSize: '0.8rem' }}><strong>Created:</strong> {new Date(ag.createdAt).toLocaleDateString()}</div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                          <button type="button" onClick={() => window.location.href = `/agreements/${ag._id}`} style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer' }}>View</button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                </>
                               )
                             )}
                           </div>
@@ -834,6 +1017,11 @@ const Admin = () => {
             </div>
           )}
 
+          {activeTab === 'agreements' && (
+            <div className="admin-container">
+              <AgreementsList />
+            </div>
+          )}   
           {/* ── CHAT ── */}
           {activeTab === 'chat' && (
             <div className="admin-container">
@@ -860,6 +1048,31 @@ const Admin = () => {
             </div>
           )}
 
+        <AgreementModal
+          open={showAgreementModal}
+          onClose={() => setShowAgreementModal(false)}
+          application={agreementApp}
+          property={agreementApp?.room}
+          onCreated={(result) => {
+            // mark application (UI only) to indicate agreement draft
+            if (agreementApp) {
+              setApplications((prev) => prev.map(a => a._id === agreementApp._id ? { ...a, status: 'agreement_draft' } : a));
+              if (result?.agreement) {
+                setAgreementsByApp((prev) => ({
+                  ...prev,
+                  [agreementApp._id]: [result.agreement, ...(prev[agreementApp._id] || [])],
+                }));
+              }
+            }
+            // navigate to the created agreement so landlord can preview and send
+            try {
+              const agId = result?.agreement?._id;
+              if (agId) navigate(`/agreements/${agId}`);
+            } catch (err) {
+              console.error('Failed to navigate to agreement', err);
+            }
+          }}
+        />
         </main>
       </div>
     </div>

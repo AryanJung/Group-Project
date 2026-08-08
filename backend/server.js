@@ -39,8 +39,10 @@ const reviewRoutes      = require('./routes/reviewRoutes');
 const chatRoutes        = require('./routes/chatRoutes');
 const rentalRoutes      = require('./routes/rentalRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
+const visitRoutes       = require('./routes/visitRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const groupChatRoutes   = require('./routes/groupChatRoutes');
+const agreementRoutes   = require('./routes/agreementRoutes');
 
 // ── Teammate's routes (KYC / SuperAdmin / Appeals) ────────────────────────────
 const superAdminRoutes  = require('./routes/superAdminRoutes');
@@ -54,6 +56,8 @@ app.use('/rooms',         reviewRoutes);
 app.use('/chat',          chatRoutes);
 app.use('/rentals',       rentalRoutes);
 app.use('/applications',  applicationRoutes);
+app.use('/visits',        visitRoutes);
+app.use('/agreements',    agreementRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/group-chats',   groupChatRoutes);
 app.use('/super-admin',   superAdminRoutes);

@@ -13,6 +13,8 @@ import Chat from './pages/Chat/Chat';
 import MyChats from './pages/MyChats/MyChats';
 import KycSubmit from './pages/Kyc/KycSubmit';
 import SuperAdmin from './pages/SuperAdmin/SuperAdmin';
+import AgreementsList from './pages/Agreements/AgreementsList';
+import AgreementView from './pages/Agreements/AgreementView';
 import ChatbotWidget from './components/ChatbotWidget/ChatbotWidget';
 import './App.css';
 
@@ -191,6 +193,8 @@ function AppContent() {
         <Route path="/my-chats" element={<MyChats />} />
         <Route path="/kyc" element={<KycSubmit />} />
         <Route path="/super-admin" element={<SuperAdmin />} />
+        <Route path="/agreements" element={<AgreementsList />} />
+        <Route path="/agreements/:id" element={<AgreementView />} />
       </Routes>
       <ChatbotWidget />
     </div>

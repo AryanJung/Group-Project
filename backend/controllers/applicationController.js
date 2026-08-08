@@ -177,32 +177,24 @@ const acceptApplication = async (req, res) => {
       });
     }
 
-    // Create the Rental record
-    const rental = await Rental.create({
-      room: room._id,
-      renter: application.applicant._id,
-      owner: req.user._id,
-      application: application._id,
-    });
-
-    // Update application status
-    application.status = "accepted";
+    // MARK AS SELECTED PROSPECT — DO NOT CREATE A RENTAL HERE
+    // This follows the business rule: selection is not tenancy. The owner
+    // selects a prospective tenant; tenancy will be created only after an
+    // executed agreement.
+    application.status = "selected";
     await application.save();
 
-    // Update room isRented status
-    await syncRoomStatus(room);
-
-    // Notify the applicant
+    // Notify the applicant that they have been selected as prospective tenant
     await Notification.create({
       recipient: application.applicant._id,
       type: "application_accepted",
       application: application._id,
       room: room._id,
       fromUser: req.user._id,
-      message: `Your application for "${room.title}" was accepted! You can now access the group chat.`,
+      message: `You have been selected as a prospective tenant for "${room.title}". Please schedule a visit to proceed.`,
     });
 
-    return res.status(200).json({ application, rental });
+    return res.status(200).json({ application });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({ message: "This user is already renting this property" });
@@ -230,8 +222,13 @@ const rejectApplication = async (req, res) => {
       return res.status(403).json({ message: "Only the listing owner can reject applications" });
     }
 
-    if (application.status !== "pending") {
+    if (application.status === "rejected") {
       return res.status(400).json({ message: `Application is already ${application.status}` });
+    }
+
+    const rentalExists = await Rental.exists({ room: application.room._id, renter: application.applicant._id });
+    if (rentalExists) {
+      return res.status(400).json({ message: "Cannot reject an application after the rental has been finalized." });
     }
 
     application.status = "rejected";

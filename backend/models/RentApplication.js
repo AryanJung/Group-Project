@@ -21,7 +21,17 @@ const rentApplicationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "accepted", "rejected"],
+      enum: [
+        "pending",
+        "selected",
+        "visit_requested",
+        "visit_scheduled",
+        "visit_completed",
+        "both_agree_to_proceed",
+        "agreement_draft",
+        "accepted",
+        "rejected",
+      ],
       default: "pending",
     },
     message: {

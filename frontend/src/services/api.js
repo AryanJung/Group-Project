@@ -313,7 +313,7 @@ export const applicationAPI = {
 
   accept: async (applicationId) => {
     const response = await api.patch(`/applications/${applicationId}/accept`);
-    return response.data;
+    return response.data.application || response.data;
   },
 
   reject: async (applicationId) => {
@@ -339,6 +339,76 @@ export const applicationAPI = {
 
   getOrCreateChat: async (applicationId) => {
     const response = await api.post(`/applications/${applicationId}/chat`);
+    return response.data;
+  },
+};
+
+// ─── Visit API ───────────────────────────────────────────────────────────────
+
+export const visitAPI = {
+  requestVisit: async (applicationId, proposedAt, notes) => {
+    const response = await api.post(`/visits/applications/${applicationId}/request`, { proposedAt, notes });
+    return response.data;
+  },
+  confirmVisit: async (visitId, confirmedAt) => {
+    const response = await api.patch(`/visits/confirm/${visitId}`, { confirmedAt });
+    return response.data;
+  },
+  rejectVisit: async (visitId) => {
+    const response = await api.patch(`/visits/reject/${visitId}`);
+    return response.data;
+  },
+  completeVisit: async (visitId, roleDecision) => {
+    const response = await api.patch(`/visits/${visitId}/complete`, { roleDecision });
+    return response.data;
+  },
+  getVisitsByApplication: async (applicationId) => {
+    const response = await api.get(`/visits/applications/${applicationId}`);
+    return response.data;
+  },
+};
+
+// ─── Agreement API ───────────────────────────────────────────────────────────
+
+export const agreementAPI = {
+  create: async (payload) => {
+    const response = await api.post('/agreements', payload);
+    return response.data;
+  },
+  createVersion: async (agreementId, payload) => {
+    const response = await api.post(`/agreements/${agreementId}/versions`, payload);
+    return response.data;
+  },
+  sendVersion: async (agreementId, versionNumber) => {
+    const response = await api.post(`/agreements/${agreementId}/versions/send`, { versionNumber });
+    return response.data;
+  },
+  requestChanges: async (agreementId, versionNumber, requestedChanges) => {
+    const response = await api.post(`/agreements/${agreementId}/versions/request-changes`, { versionNumber, requestedChanges });
+    return response.data;
+  },
+  acceptVersion: async (agreementId, versionNumber) => {
+    const response = await api.post(`/agreements/${agreementId}/versions/accept`, { versionNumber });
+    return response.data;
+  },
+  decline: async (agreementId) => {
+    const response = await api.post(`/agreements/${agreementId}/versions/decline`);
+    return response.data;
+  },
+  execute: async (agreementId, versionNumber) => {
+    const response = await api.post(`/agreements/${agreementId}/execute`, { versionNumber });
+    return response.data;
+  },
+  getAgreement: async (agreementId) => {
+    const response = await api.get(`/agreements/${agreementId}`);
+    return response.data;
+  },
+  getMine: async () => {
+    const response = await api.get('/agreements/mine');
+    return response.data;
+  },
+  getByApplication: async (applicationId) => {
+    const response = await api.get(`/agreements/applications/${applicationId}`);
     return response.data;
   },
 };

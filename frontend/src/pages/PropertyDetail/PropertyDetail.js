@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../../context/PropertiesContext';
 import { useAuth } from '../../context/AuthContext';
-import { adminAPI, reviewAPI, rentalAPI, applicationAPI } from '../../services/api';
+import { adminAPI, reviewAPI, rentalAPI, applicationAPI, visitAPI } from '../../services/api';
 import {
   buildPropertyFeatures,
   formatDescription,
@@ -11,6 +11,7 @@ import {
   getVideoEmbedUrl,
 } from '../../utils/propertyHelpers';
 import './PropertyDetail.css';
+import ScheduleVisitModal from '../../components/ScheduleVisitModal/ScheduleVisitModal';
 
 const PENDING_STATUSES = ['pending_verification', 'pending'];
 
@@ -63,6 +64,8 @@ const PropertyDetail = () => {
   const [rentalStatus, setRentalStatus] = useState(null);
   const [renting, setRenting] = useState(false);
   const [messaging, setMessaging] = useState(false);
+
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
@@ -435,6 +438,38 @@ const PropertyDetail = () => {
                       Cancel Rental
                     </button>
                   )}
+                </>
+              ) : applicationStatus === 'selected' ? (
+                <>
+                  <div className="prospect-banner">
+                    <p>You have been selected as a prospective tenant for this property. This does not mean you have rented it yet.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setShowScheduleModal(true)}
+                    disabled={renting}
+                  >
+                    {renting ? 'Requesting…' : 'Schedule a Visit'}
+                  </button>
+                  <ScheduleVisitModal
+                    open={showScheduleModal}
+                    onClose={() => setShowScheduleModal(false)}
+                    property={property}
+                    applicationId={rentalStatus?.application?._id}
+                    onSubmit={async ({ applicationId, proposedAt }) => {
+                      setRenting(true);
+                      try {
+                        await visitAPI.requestVisit(applicationId, proposedAt, 'Visit requested from UI');
+                        setSuccessMessage('Visit requested. The landlord will confirm soon.');
+                      } catch (err) {
+                        setErrorMessage(err.response?.data?.message || 'Failed to request visit');
+                        throw err;
+                      } finally {
+                        setRenting(false);
+                      }
+                    }}
+                  />
                 </>
               ) : applicationStatus === 'pending' ? (
                 <>
