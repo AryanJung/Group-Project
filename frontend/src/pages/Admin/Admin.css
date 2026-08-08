@@ -510,6 +510,71 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* --- Custom Property Feature Tags --- */
+.custom-tags-input-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.custom-tags-input-wrapper input {
+  flex: 1;
+}
+
+.btn-add-tag {
+  padding: 0.75rem 1.5rem;
+  background: #051747;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add-tag:hover {
+  background: #f97316;
+}
+
+.custom-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.custom-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.85rem;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-remove-tag {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.btn-remove-tag:hover {
+  color: #ef4444;
+}
+
 /* --- Breakpoint Media Matrix --- */
 @media (max-width: 1024px) {
   .admin-dashboard-wrapper {
