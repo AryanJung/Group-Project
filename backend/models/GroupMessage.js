@@ -21,9 +21,14 @@ const groupMessageSchema = new mongoose.Schema(
     },
     text: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 2000,
+    },
+    attachment: {
+      url: { type: String, trim: true },
+      name: { type: String, trim: true, maxlength: 255 },
+      type: { type: String, trim: true, maxlength: 100 },
+      size: { type: Number, min: 0 },
     },
   },
   { timestamps: true }
@@ -33,6 +38,9 @@ const groupMessageSchema = new mongoose.Schema(
 groupMessageSchema.pre("save", function (next) {
   if (!this.chat && !this.room) {
     return next(new Error("GroupMessage must belong to either a chat or a room"));
+  }
+  if (!this.text?.trim() && !this.attachment?.url) {
+    return next(new Error("GroupMessage must contain text or an attachment"));
   }
   next();
 });
