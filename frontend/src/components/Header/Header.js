@@ -170,11 +170,12 @@ const NotificationBell = () => {
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 const Header = () => {
-  const { user, logout, isAuthenticated, isOwner, isSuperAdmin } = useAuth();
+  const { user, logout, isAuthenticated, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavClick = (e, sectionId) => {
     e.preventDefault();
@@ -188,6 +189,15 @@ const Header = () => {
     }
   };
 
+  const handleMobileNavLinkClick = (e, sectionId) => {
+    setMobileMenuOpen(false);
+    handleNavClick(e, sectionId);
+  };
+
+  const handleMobileLinkClick = () => {
+    setMobileMenuOpen(false);
+  };
+
   const handleLoginClick = () => { setShowLogin(true); setShowRegister(false); };
   const handleRegisterClick = () => { setShowRegister(true); setShowLogin(false); };
   const handleCloseModals = () => { setShowLogin(false); setShowRegister(false); };
@@ -199,16 +209,29 @@ const Header = () => {
       <header className="header">
         <div className="header-container">
           <div className="logo">
-  <img src={logo} alt="Ghar Logo" className="logo-img" /></div>
-          <nav className="nav">
-            <a href="#home" className="nav-link" onClick={(e) => handleNavClick(e, 'home')}>Home</a>
-             <Link to="/properties" className="nav-link">Properties</Link>
-            <a href="#features" className="nav-link" onClick={(e) => handleNavClick(e, 'features')}>Features</a>
-            <a href="#about" className="nav-link" onClick={(e) => handleNavClick(e, 'about')}>About</a>
-            <a href="#contact" className="nav-link" onClick={(e) => handleNavClick(e, 'contact')}>Contact</a>
+            <img src={logo} alt="Ghar Logo" className="logo-img" />
+          </div>
+          
+          <button
+            className={`hamburger-menu ${mobileMenuOpen ? 'hamburger-menu--open' : ''}`}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <span className="hamburger-bar"></span>
+            <span className="hamburger-bar"></span>
+            <span className="hamburger-bar"></span>
+          </button>
+
+          <nav className={`nav ${mobileMenuOpen ? 'nav--open' : ''}`}>
+            <a href="#home" className="nav-link" onClick={(e) => handleMobileNavLinkClick(e, 'home')}>Home</a>
+            <Link to="/properties" className="nav-link" onClick={handleMobileLinkClick}>Properties</Link>
+            <a href="#features" className="nav-link" onClick={(e) => handleMobileNavLinkClick(e, 'features')}>Features</a>
+            <a href="#about" className="nav-link" onClick={(e) => handleMobileNavLinkClick(e, 'about')}>About</a>
+            <a href="#contact" className="nav-link" onClick={(e) => handleMobileNavLinkClick(e, 'contact')}>Contact</a>
             {/* Super Admin panel */}
             {isAuthenticated && isSuperAdmin && (
-              <Link to="/super-admin" className="nav-link">SuperAdmin</Link>
+              <Link to="/super-admin" className="nav-link" onClick={handleMobileLinkClick}>SuperAdmin</Link>
             )}
           </nav>
 
