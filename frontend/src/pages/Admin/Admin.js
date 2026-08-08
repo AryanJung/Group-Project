@@ -49,8 +49,10 @@ const Admin = () => {
     description: '',
     image: '',
     maxRenters: 1,
+    features: [],
   };
   const [formData, setFormData] = useState(emptyForm);
+  const [newTagInput, setNewTagInput] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]); // Track cloud upload image target selections
 
   // Read URL query params on mount — notification deep-link support
@@ -170,6 +172,7 @@ const Admin = () => {
       description: property.description || '',
       maxRenters: property.maxRenters ?? 1,
       image: property.image || '',
+      features: property.features || [],
     });
     setSelectedFiles([]);
     setFormError('');
@@ -224,6 +227,12 @@ const Admin = () => {
       multipartData.append('coordinates', JSON.stringify(formData.coordinates));
     }
 
+    if (formData.features && formData.features.length > 0) {
+      formData.features.forEach((feat) => {
+        multipartData.append('features', feat);
+      });
+    }
+
     // Append standard file streams to match backend middleware definition
     selectedFiles.forEach((file) => {
       multipartData.append('images', file);
@@ -245,6 +254,34 @@ const Admin = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleAddTag = () => {
+    const tag = newTagInput.trim();
+    if (!tag) return;
+    if (formData.features?.includes(tag)) {
+      setNewTagInput('');
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      features: [...(prev.features || []), tag],
+    }));
+    setNewTagInput('');
+  };
+
+  const handleAddTagOnEnter = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      features: (prev.features || []).filter((t) => t !== tagToRemove),
+    }));
   };
 
   if (!isAuthenticated) return null;
@@ -434,6 +471,30 @@ const Admin = () => {
                           min="1" max="20" required
                           title="How many renters can rent this listing (e.g. 2 for a 2-room flat)"
                         />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group form-group--wide">
+                        <label>Custom Feature Tags (e.g. WiFi, Parking, Balcony)</label>
+                        <div className="custom-tags-input-wrapper">
+                          <input
+                            type="text"
+                            placeholder="Type a feature tag and press Enter or click Add"
+                            value={newTagInput}
+                            onChange={(e) => setNewTagInput(e.target.value)}
+                            onKeyDown={handleAddTagOnEnter}
+                          />
+                          <button type="button" onClick={handleAddTag} className="btn-add-tag">Add</button>
+                        </div>
+                        <div className="custom-tags-container">
+                          {formData.features?.map((tag, idx) => (
+                            <span key={idx} className="custom-tag-chip">
+                              {tag}
+                              <button type="button" onClick={() => handleRemoveTag(tag)} className="btn-remove-tag">×</button>
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
