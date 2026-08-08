@@ -23,6 +23,26 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage });
 
+const chatAttachmentStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'group-chat-attachments',
+    resource_type: 'auto',
+    public_id: () => `chat-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+  },
+});
+
+const uploadChatAttachment = multer({
+  storage: chatAttachmentStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+      return cb(null, true);
+    }
+    return cb(new Error('Unsupported file type. Please upload an image or PDF.'));
+  },
+});
+
 const createDocumentUpload = () =>
   multer({
     storage,
@@ -37,4 +57,4 @@ const createDocumentUpload = () =>
 
 const uploadKycDocument = createDocumentUpload();
 
-module.exports = { upload, uploadKycDocument, cloudinary, ALLOWED_DOCUMENT_MIME_TYPES };
+module.exports = { upload, uploadKycDocument, uploadChatAttachment, cloudinary, ALLOWED_DOCUMENT_MIME_TYPES };
