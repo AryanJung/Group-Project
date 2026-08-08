@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { adminAPI, groupChatAPI, userAPI } from '../../services/api';
+import { adminAPI, applicationAPI, groupChatAPI } from '../../services/api';
 import './Chat.css';
 
 const POLL_INTERVAL_MS = 3000;
@@ -59,6 +59,7 @@ const Chat = () => {
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [pendingAttachment, setPendingAttachment] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
@@ -82,6 +83,7 @@ const Chat = () => {
   const pollTimerRef = useRef(null);
   const chatIdRef = useRef(null);
   const inputRef = useRef(null);
+  const attachmentInputRef = useRef(null);
   const isOwner = chat?.owner?._id === user?._id || chat?.owner === user?._id;
   const myRole = isOwner ? 'Owner' : 'Renter';
   const memberCount = chat?.members?.length || 0;
@@ -205,13 +207,29 @@ const Chat = () => {
   useEffect(() => {
     if (!groupPanelOpen || !canManageMembers || !isOwner) return;
 
+    const roomId = chat?.room?._id || chat?.room || id;
+    if (!roomId) return;
+
+    setAllUsers([]);
+    setSelectedUserIds([]);
     setUsersLoading(true);
-    userAPI
-      .getAllUsers()
-      .then((users) => setAllUsers(users))
-      .catch(() => setToast('Unable to load users right now.'))
-      .finally(() => setUsersLoading(false));
-  }, [groupPanelOpen, canManageMembers, isOwner]);
+    let isCurrentRoom = true;
+    applicationAPI
+      .getApprovedRenters(roomId)
+      .then((users) => {
+        if (isCurrentRoom) setAllUsers(users || []);
+      })
+      .catch(() => {
+        if (isCurrentRoom) setToast('Unable to load approved renters right now.');
+      })
+      .finally(() => {
+        if (isCurrentRoom) setUsersLoading(false);
+      });
+
+    return () => {
+      isCurrentRoom = false;
+    };
+  }, [groupPanelOpen, canManageMembers, isOwner, chat?.room, id]);
 
   const groupedChats = useMemo(() => {
     const groups = { Today: [], Yesterday: [], Older: [] };
@@ -241,22 +259,49 @@ const Chat = () => {
   const handleSend = async (e) => {
     e.preventDefault();
     const text = newMessage.trim();
-    if (!text || isSending || !chatIdRef.current) return;
+    if ((!text && !pendingAttachment) || isSending || !chatIdRef.current) return;
 
     setNewMessage('');
+    setPendingAttachment(null);
     setSendError('');
     setIsSending(true);
     shouldAutoScrollRef.current = true;
 
     try {
-      const saved = await groupChatAPI.sendMessage(chatIdRef.current, text);
+      const saved = await groupChatAPI.sendMessage(chatIdRef.current, text, pendingAttachment);
       setMessages((prev) => [...prev, saved]);
       scrollToBottom('smooth');
     } catch (err) {
       setSendError(err.response?.data?.message || 'Failed to send message. Please try again.');
       setNewMessage(text);
+      setPendingAttachment(pendingAttachment);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleAttachmentChange = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!(file.type.startsWith('image/') || file.type === 'application/pdf')) {
+      setSendError('Please choose an image or PDF.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setSendError('Attachments must be 10 MB or smaller.');
+      return;
+    }
+
+    setSendError('');
+    setPendingAttachment(file);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(e);
     }
   };
 
@@ -451,7 +496,16 @@ const Chat = () => {
                         {!isMe && <div className="message-avatar" aria-hidden="true">{initialsFor(senderName)}</div>}
                         <div className={`message-bubble ${isMe ? 'message-bubble--own' : 'message-bubble--other'}`}>
                           {!isMe && <span className="message-sender-name">{senderName}</span>}
-                          <p>{msg.text}</p>
+                          {msg.attachment && (
+                            <a className="message-attachment" href={msg.attachment.url} target="_blank" rel="noreferrer">
+                              {msg.attachment.type?.startsWith('image/') ? (
+                                <img src={msg.attachment.url} alt={msg.attachment.name || 'Attached image'} />
+                              ) : (
+                                <span>PDF: {msg.attachment.name || 'Open attachment'}</span>
+                              )}
+                            </a>
+                          )}
+                          {msg.text && <p>{msg.text}</p>}
                           <span className="message-time">{formatTime(msg.createdAt)}</span>
                         </div>
                       </div>
@@ -464,8 +518,16 @@ const Chat = () => {
 
           {sendError && <div className="chat-send-error" role="alert">{sendError}</div>}
 
+          {pendingAttachment && (
+            <div className="chat-attachment-preview">
+              <span>{pendingAttachment.name}</span>
+              <button type="button" onClick={() => setPendingAttachment(null)} aria-label="Remove attachment">x</button>
+            </div>
+          )}
+
           <form className="chat-input-form" onSubmit={handleSend}>
-            <button type="button" className="chat-attach-btn" aria-label="Add attachment" onClick={() => setToast('Attachments are coming soon.')}>
+            <input ref={attachmentInputRef} type="file" accept="image/*,application/pdf" hidden onChange={handleAttachmentChange} />
+            <button type="button" className="chat-attach-btn" aria-label="Add attachment" onClick={() => attachmentInputRef.current?.click()} disabled={isSending || status !== true}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M21.4 11.6l-8.8 8.8a6 6 0 01-8.5-8.5l9.2-9.2a4 4 0 015.7 5.7l-9.2 9.2a2 2 0 01-2.8-2.8l8.6-8.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -476,11 +538,12 @@ const Chat = () => {
               placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
               disabled={isSending || status !== true}
               rows="1"
               aria-label="Message text"
             />
-            <button type="submit" className="btn-send" disabled={isSending || !newMessage.trim() || status !== true} aria-label="Send message">
+            <button type="submit" className="btn-send" disabled={isSending || (!newMessage.trim() && !pendingAttachment) || status !== true} aria-label="Send message">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -505,7 +568,7 @@ const Chat = () => {
                     <div className="group-user-picker-header">
                       <div>
                         <h3>Add users</h3>
-                        <p>{allUsers.length} total users</p>
+                        <p>{allUsers.length} approved renters</p>
                       </div>
                       <button
                         type="button"

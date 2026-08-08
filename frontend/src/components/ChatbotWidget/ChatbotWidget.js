@@ -16,6 +16,7 @@ const ChatbotWidget = () => {
   const [messages, setMessages] = useState([WELCOME]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userExpanded, setUserExpanded] = useState(false);
   const historyRef = useRef([]);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -65,6 +66,13 @@ const ChatbotWidget = () => {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send(e);
+    }
+  };
+
   const fmt = (ts) =>
     ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -75,7 +83,7 @@ const ChatbotWidget = () => {
     <div className="cw-root">
       {/* Chat panel */}
       {open && (
-        <div className="cw-panel">
+        <div className={`cw-panel ${userExpanded ? 'cw-panel--expanded' : ''}`}>
           <div className="cw-header">
             <div className="cw-header-left">
               <span className="cw-avatar" aria-hidden="true">
@@ -88,13 +96,33 @@ const ChatbotWidget = () => {
                 <p className="cw-subtitle">Powered by local AI</p>
               </div>
             </div>
-            <button
-              className="cw-close"
-              onClick={() => setOpen(false)}
-              aria-label="Close chat"
-            >
-              x
-            </button>
+            
+            <div className="cw-header-actions">
+              <button
+                type="button"
+                className="cw-toggle-size"
+                onClick={() => setUserExpanded(!userExpanded)}
+                aria-label={userExpanded ? "Reduce chat size" : "Enlarge chat size"}
+              >
+                {userExpanded ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>
+                  </svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                  </svg>
+                )}
+              </button>
+              
+              <button
+                className="cw-close"
+                onClick={() => setOpen(false)}
+                aria-label="Close chat"
+              >
+                x
+              </button>
+            </div>
           </div>
 
           <div className="cw-messages">
@@ -215,14 +243,15 @@ const ChatbotWidget = () => {
           </div>
 
           <form className="cw-form" onSubmit={send}>
-            <input
+            <textarea
               ref={inputRef}
               className="cw-input"
-              type="text"
               placeholder="Ask anything…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
               disabled={loading}
+              rows="1"
             />
             <button
               type="submit"

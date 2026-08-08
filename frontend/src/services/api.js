@@ -400,8 +400,11 @@ export const groupChatAPI = {
     return response.data;
   },
 
-  sendMessage: async (chatId, text) => {
-    const response = await api.post(`/group-chats/${chatId}/messages`, { text });
+  sendMessage: async (chatId, text, attachment) => {
+    const payload = new FormData();
+    payload.append('text', text);
+    if (attachment) payload.append('attachment', attachment);
+    const response = await api.post(`/group-chats/${chatId}/messages`, payload);
     return response.data;
   },
 

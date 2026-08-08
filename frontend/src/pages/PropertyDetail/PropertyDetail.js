@@ -514,12 +514,12 @@ const PropertyDetail = () => {
               </button>
             </div>
 
-            {(errorMessage || successMessage) && (
+            {/* {(errorMessage || successMessage) && (
               <div className="property-action-messages">
                 {errorMessage && <p className="action-error">{errorMessage}</p>}
                 {successMessage && <p className="action-success">{successMessage}</p>}
               </div>
-            )}
+            )} */}
           </aside>
         </section>
 
