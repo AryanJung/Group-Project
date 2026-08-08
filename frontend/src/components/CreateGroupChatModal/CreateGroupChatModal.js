@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { adminAPI, applicationAPI, groupChatAPI } from '../../services/api';
+import { adminAPI, groupChatAPI, userAPI } from '../../services/api';
 import './CreateGroupChatModal.css';
 
 const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
-  const { isOwner } = useAuth();
+  const { isOwner, user } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [groupName, setGroupName] = useState('');
@@ -46,20 +46,22 @@ const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
   }, [open]);
 
   useEffect(() => {
-    if (!open || !selectedRoomId) {
+    if (!open) {
       setUsers([]);
       return;
     }
 
-    applicationAPI
-      .getApprovedRenters(selectedRoomId)
+    userAPI
+      .getAllUsers()
       .then((data) => setUsers(data || []))
       .catch(() => setUsers([]));
-  }, [open, selectedRoomId]);
+  }, [open]);
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
     return users.filter((candidate) => {
+      const candidateId = String(candidate._id || candidate.id);
+      if (user?._id && candidateId === String(user._id)) return false;
       if (!query) return true;
       const fields = [candidate.username, candidate.name, candidate.email]
         .filter(Boolean)
@@ -67,7 +69,7 @@ const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
         .toLowerCase();
       return fields.includes(query);
     });
-  }, [search, users]);
+  }, [search, users, user]);
 
   const toggleUser = (userId) => {
     setSelectedUserIds((prev) =>
@@ -143,7 +145,7 @@ const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
               </label>
 
               <div className="create-group-modal__field">
-                <span>Invite approved renters</span>
+                <span>Invite members</span>
                 <input
                   type="search"
                   value={search}
@@ -168,7 +170,7 @@ const CreateGroupChatModal = ({ open, onClose, onCreated }) => {
                 )}
                 <div className="create-group-modal__list">
                   {filteredUsers.length === 0 ? (
-                    <p className="create-group-modal__empty">No approved renters found for this listing.</p>
+                    <p className="create-group-modal__empty">No users found.</p>
                   ) : (
                     filteredUsers.map((candidate) => {
                       const candidateId = String(candidate._id || candidate.id);
