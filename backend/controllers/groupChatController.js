@@ -254,12 +254,14 @@ const getChatMessages = async (req, res) => {
 
 /**
  * POST /group-chats/:id/messages
- * Body: { text: string }
+ * Body: { text?: string, attachment?: File }
  */
 const sendChatMessage = async (req, res) => {
   try {
-    const { text } = req.body;
-    if (!text?.trim()) return res.status(400).json({ message: "text is required" });
+    const { text = "" } = req.body;
+    if (!text.trim() && !req.file) {
+      return res.status(400).json({ message: "A message or attachment is required" });
+    }
 
     const chat = await GroupChat.findById(req.params.id);
     if (!chat) return res.status(404).json({ message: "Group chat not found" });
@@ -271,6 +273,14 @@ const sendChatMessage = async (req, res) => {
       chat: chat._id,
       sender: req.user._id,
       text: text.trim(),
+      attachment: req.file
+        ? {
+            url: req.file.path,
+            name: req.file.originalname,
+            type: req.file.mimetype,
+            size: req.file.size,
+          }
+        : undefined,
     });
 
     await message.populate("sender", "name username email");
@@ -291,3 +301,4 @@ module.exports = {
   getChatMessages,
   sendChatMessage,
 };
+
