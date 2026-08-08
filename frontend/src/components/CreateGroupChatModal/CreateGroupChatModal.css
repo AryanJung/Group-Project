@@ -39,7 +39,7 @@
   font-weight: 600;
 }
 
-.create-group-modal__field input,
+.create-group-modal__field input:not([type="checkbox"]),
 .create-group-modal__field select {
   width: 100%;
   padding: 0.7rem 0.8rem;
@@ -92,9 +92,19 @@
 .create-group-modal__option {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.55rem;
   font-size: 0.85rem;
   color: #334155;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.create-group-modal__option input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
 }
 
 .create-group-modal__empty {
