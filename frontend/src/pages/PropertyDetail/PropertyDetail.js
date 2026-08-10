@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../../context/PropertiesContext';
 import { useAuth } from '../../context/AuthContext';
 import { adminAPI, reviewAPI, rentalAPI, applicationAPI, visitAPI } from '../../services/api';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import {
   buildPropertyFeatures,
   formatDescription,
@@ -13,7 +15,279 @@ import {
 import './PropertyDetail.css';
 import ScheduleVisitModal from '../../components/ScheduleVisitModal/ScheduleVisitModal';
 
+mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN;
+
 const PENDING_STATUSES = ['pending_verification', 'pending'];
+
+// ── Builds a Mapbox Static Images URL (no WebGL required) ────────────────────
+// Uses the Mapbox Static Tiles API to generate a server-rendered map image
+// with a pin at the given center. This works in every browser/environment.
+const buildStaticMapUrl = (center, zoom, pinHex, token) => {
+  const [lng, lat] = center;
+  const z = Math.min(Math.round(zoom), 17);
+  return (
+    `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/` +
+    `pin-s+${pinHex}(${lng},${lat})/` +
+    `${lng},${lat},${z},0/` +
+    `900x600@2x` +
+    `?access_token=${token}`
+  );
+};
+
+// ── Embedded Mapbox modal shown when "View on Map" is clicked ─────────────────
+//
+// Phase model (no WebGL crash possible):
+//  'resolving' → geocode / validate coords
+//  'static'    → show Mapbox Static Image (works everywhere, no WebGL)
+//  'upgrading' → attempt to mount interactive GL map on top of static
+//  'failed'    → both coords and geocoding failed → Google Maps link
+const MapModal = ({ coordinates, locationName, onClose }) => {
+  const mapContainer  = useRef(null);
+  const mapRef        = useRef(null);
+  const [phase,           setPhase]           = useState('resolving');
+  const [center,          setCenter]          = useState(null);
+  const [zoom,            setZoom]            = useState(15);
+  const [isApproximate,   setIsApproximate]   = useState(false);
+
+  const hasExactCoords = Boolean(
+    coordinates &&
+    typeof coordinates.lat === 'number' &&
+    typeof coordinates.lng === 'number'
+  );
+
+  // ── Step 1: resolve the location (synchronous for exact coords, async for geocode)
+  useEffect(() => {
+    let active = true;
+
+    const resolve = async () => {
+      if (hasExactCoords) {
+        if (active) {
+          setCenter([coordinates.lng, coordinates.lat]);
+          setZoom(17);
+          setPhase('static');
+        }
+        return;
+      }
+
+      if (!locationName) { if (active) setPhase('failed'); return; }
+
+      try {
+        const res  = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+          `${encodeURIComponent(locationName)}.json` +
+          `?access_token=${mapboxgl.accessToken}&limit=1`
+        );
+        const data = await res.json();
+        if (active && data.features?.length > 0) {
+          const [lng, lat] = data.features[0].center;
+          setCenter([lng, lat]);
+          setZoom(14);
+          setIsApproximate(true);
+          setPhase('static');
+        } else if (active) {
+          setPhase('failed');
+        }
+      } catch {
+        if (active) setPhase('failed');
+      }
+    };
+
+    resolve();
+    return () => { active = false; };
+  }, [coordinates, locationName, hasExactCoords]);
+
+  // ── Step 2: once static image is visible, try to upgrade to interactive GL map
+  useEffect(() => {
+    if (phase !== 'static' || !center || !mapContainer.current || mapRef.current) return;
+
+    // Use the stricter check: failIfMajorPerformanceCaveat catches software
+    // renderers (Mesa/LLVM) that pass the basic check but crash on init.
+    if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) return;
+
+    setPhase('upgrading');
+
+    let map;
+    try {
+      map = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center,
+        zoom,
+      });
+    } catch {
+      // Synchronous constructor throw (rare, but possible)
+      setPhase('static');
+      return;
+    }
+
+    // Mapbox fires the WebGL error as an *event*, not a throw.
+    // Our try/catch above won't catch it — this listener handles it.
+    map.once('error', (e) => {
+      const msg = (e.error?.message || String(e.error || '')).toLowerCase();
+      if (msg.includes('webgl') || msg.includes('failed to initialize')) {
+        try { map.remove(); } catch {}
+        mapRef.current = null;
+        setPhase('static'); // silently fall back; static image already rendered
+      }
+    });
+
+    mapRef.current = map;
+
+    const pinColor  = isApproximate ? '#F59E0B' : '#FF4444';
+    const popupHtml = isApproximate
+      ? `<div style="font-family:sans-serif;line-height:1.4">
+           <strong>${locationName}</strong><br/>
+           <span style="font-size:11px;color:#92400e">
+             ⚠ Approximate area — exact pin was not saved for this listing
+           </span>
+         </div>`
+      : `<strong>${locationName || 'Property Location'}</strong>`;
+
+    new mapboxgl.Marker({ color: pinColor })
+      .setLngLat(center)
+      .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupHtml))
+      .addTo(map)
+      .togglePopup();
+
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    map.on('load', () => {
+      map.flyTo({ center, zoom, speed: 1.4, curve: 1.5 });
+    });
+
+    // Click anywhere on the GL map → open Google Maps at the resolved location
+    map.getCanvas().style.cursor = 'pointer';
+    map.on('click', () => {
+      // center is [lng, lat]; Google Maps expects lat,lng
+      const gmUrl = `https://maps.google.com/?q=${center[1]},${center[0]}`;
+      window.open(gmUrl, '_blank', 'noopener,noreferrer');
+    });
+
+    return () => {
+      if (mapRef.current) {
+        try { mapRef.current.remove(); } catch {}
+        mapRef.current = null;
+      }
+    };
+  }, [phase, center, zoom, isApproximate, locationName]);
+
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  const pinHex    = isApproximate ? 'F59E0B' : 'FF4444';
+  const staticUrl = center ? buildStaticMapUrl(center, zoom, pinHex, mapboxgl.accessToken) : null;
+
+  // Always prefer the resolved `center` (covers both exact + geocoded coords).
+  // center is [lng, lat] (Mapbox order) → Google Maps needs lat,lng.
+  const googleMapsUrl = center
+    ? `https://maps.google.com/?q=${center[1]},${center[0]}`
+    : hasExactCoords
+    ? `https://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`
+    : `https://maps.google.com/?q=${encodeURIComponent(locationName || '')}`;
+
+  return (
+    <div className="map-modal-backdrop" onClick={handleBackdropClick}>
+      <div className="map-modal-content">
+
+        {/* ── Header ── */}
+        <div className="map-modal-header">
+          <span className="map-modal-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+            </svg>
+            {locationName || 'Property Location'}
+            {isApproximate && <span className="map-approx-badge">Approximate</span>}
+          </span>
+          <button type="button" className="map-modal-close" onClick={onClose} aria-label="Close map">
+            ✕
+          </button>
+        </div>
+
+        {/* ── Resolving: spinner while geocoding ── */}
+        {phase === 'resolving' && (
+          <div className="map-modal-loading">
+            <div className="map-loading-spinner" aria-hidden="true" />
+            <p>Locating property…</p>
+          </div>
+        )}
+
+        {/* ── Static image (phase = 'static') ── */}
+        {(phase === 'static') && staticUrl && (
+          // Entire container is a link — click anywhere on the map to open Google Maps
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="map-static-container"
+            title="Open in Google Maps"
+            aria-label={`Open location of ${locationName || 'this property'} in Google Maps`}
+          >
+            <img
+              src={staticUrl}
+              alt={`Map showing ${locationName || 'property location'}`}
+              className="map-static-image"
+            />
+            {/* Hover-reveal "Open in Google Maps" pill */}
+            <div className="map-open-gmaps-overlay" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              Open in Google Maps ↗
+            </div>
+            {isApproximate && (
+              <div className="map-static-note">
+                ⚠ Approximate area — owner has not pinned an exact location
+              </div>
+            )}
+            <div className="map-static-badge">
+              Static map — click to open in Google Maps
+            </div>
+          </a>
+        )}
+
+        {/* ── Interactive GL map (phase = 'upgrading') ── */}
+        {/* Cursor is pointer; click anywhere → opens Google Maps at exact location */}
+        {phase === 'upgrading' && (
+          <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            <div ref={mapContainer} className="map-modal-map" />
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="map-gmaps-btn"
+              title="Open in Google Maps"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              Open in Google Maps ↗
+            </a>
+          </div>
+        )}
+
+        {/* ── Failed: both geocoding and coords missing ── */}
+        {phase === 'failed' && (
+          <div className="map-modal-error">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ marginBottom: '1rem', opacity: 0.35 }}>
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+            </svg>
+            <p style={{ marginBottom: '1.25rem' }}>
+              Could not load the map for this location.
+            </p>
+            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="map-fallback-link">
+              Open in Google Maps ↗
+            </a>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 const CheckIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -60,6 +334,9 @@ const PropertyDetail = () => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Map modal state
+  const [showMap, setShowMap] = useState(false);
 
   const [rentalStatus, setRentalStatus] = useState(null);
   const [renting, setRenting] = useState(false);
@@ -331,6 +608,7 @@ const PropertyDetail = () => {
   const hasGallery = images.length > 0;
 
   return (
+    <>
     <div className="property-detail">
       <div className="property-detail-container">
         <button onClick={() => navigate('/')} className="btn-back" type="button">
@@ -533,14 +811,7 @@ const PropertyDetail = () => {
               <button
                 type="button"
                 className="btn-outline"
-                onClick={() => {
-                  const { coordinates, location } = property;
-                  const hasCoords = coordinates && coordinates.lat && coordinates.lng;
-                  const url = hasCoords
-                    ? `http://maps.google.com/?q=${coordinates.lat},${coordinates.lng}`
-                    : `http://maps.google.com/?q=${encodeURIComponent(location)}`;
-                  window.open(url, '_blank', 'noopener,noreferrer');
-                }}
+                onClick={() => setShowMap(true)}
               >
                 View on Map
               </button>
@@ -672,6 +943,16 @@ const PropertyDetail = () => {
         </section>
       </div>
     </div>
+
+    {/* Mapbox location modal — rendered when coordinates exist and user clicks "View on Map" */}
+    {showMap && (
+      <MapModal
+        coordinates={property?.coordinates}
+        locationName={property?.location}
+        onClose={() => setShowMap(false)}
+      />
+    )}
+    </>
   );
 };
 
