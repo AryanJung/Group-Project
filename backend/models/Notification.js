@@ -44,6 +44,13 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "RentApplication",
     },
+    agreement: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Agreement",
+    },
+    agreementVersion: {
+      type: Number,
+    },
     room: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Room",

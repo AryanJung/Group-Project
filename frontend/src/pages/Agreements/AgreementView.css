@@ -1,285 +1,58 @@
-.agreement-view-page {
-  min-height: 100vh;
-  padding: 24px;
-  background: #f3f4f6;
-}
-
-.agreement-card-shell {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 32px;
-  background: #ffffff;
-  border-radius: 24px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
-}
-
-.agreement-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-}
-
-.agreement-label {
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #4b5563;
-  margin-bottom: 0.5rem;
-}
-
-.agreement-header h1 {
-  margin: 0;
-  font-size: clamp(1.8rem, 2.4vw, 2.8rem);
-  line-height: 1.05;
-}
-
-.agreement-subtitle {
-  margin: 0.6rem 0 0;
-  color: #6b7280;
-  font-size: 0.96rem;
-  max-width: 520px;
-}
-
-.agreement-header-meta {
-  text-align: right;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.agreement-meta-row {
-  color: #4b5563;
-  font-size: 0.95rem;
-}
-
-.agreement-status-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.55rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.agreement-status-draft { background: #e0e7ff; color: #4338ca; }
-.agreement-status-sent { background: #fef3c7; color: #92400e; }
-.agreement-status-final_pending, .agreement-status-accepted { background: #dcfce7; color: #166534; }
-.agreement-status-executed, .agreement-status-locked { background: #dbeafe; color: #1d4ed8; }
-.agreement-status-declined, .agreement-status-changes_requested { background: #fee2e2; color: #991b1b; }
-
-.agreement-back-button {
-  margin: 0;
-}
-
-.agreement-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.agreement-summary-card {
-  padding: 20px;
-  border-radius: 18px;
-  border: 1px solid #e5e7eb;
-  background: #f8fafc;
-  min-height: 130px;
-}
-
-.agreement-summary-card h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-}
-
-.agreement-section {
-  margin-bottom: 24px;
-}
-
-.section-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 14px;
-}
-
-.section-title-row h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.agreement-detail-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.85rem;
-  color: #374151;
-  background: #eef2ff;
-  border-radius: 999px;
-}
-
-.agreement-intro {
-  margin: 0 0 16px;
-  color: #4b5563;
-  line-height: 1.75;
-}
-
-.agreement-full-terms {
-  width: 100%;
-  margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  white-space: pre-wrap;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 20px;
-  color: #111827;
-  line-height: 1.7;
-  overflow-x: auto;
-}
-
-.agreement-actions-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-}
-
-.agreement-select-label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.agreement-select-label select {
-  min-height: 40px;
-  height: auto;
-  padding: 8px 36px 8px 12px;
-  line-height: 1.4;
-  box-sizing: border-box;
-}
-
-.agreement-actions-row .btn-outline {
-  height: 40px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-}
-
-
-.agreement-select-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 220px;
-}
-
-.agreement-select-label select,
-.agreement-select-label input,
-.agreement-select-label textarea {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  padding: 0.85rem 0.95rem;
-  font-size: 0.95rem;
-  color: #111827;
-}
-
-.new-version-panel {
-  padding: 20px;
-  border-radius: 18px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  display: grid;
-  gap: 16px;
-}
-
-.new-version-panel label {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.new-version-panel input,
-.new-version-panel textarea {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  padding: 0.85rem 0.95rem;
-  font-size: 0.95rem;
-}
-
-.agreement-footer-note {
-  padding: 18px 20px;
-  border-radius: 18px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-}
-
-.agreement-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 18px;
-}
-
-.agreement-footer div {
-  min-width: 220px;
-}
-
-.btn-primary {
-  background: #6366f1;
-  color: #fff;
-  border: none;
-  padding: 11px 18px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
-  min-height: 44px;
-}
-
-.btn-outline {
-  background: #fff;
-  border: 1px solid #d1d5db;
-  color: #374151;
-  padding: 11px 18px;
-  border-radius: 12px;
-  cursor: pointer;
-  min-height: 44px;
-}
-
-.btn-danger {
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 11px 18px;
-  border-radius: 12px;
-  cursor: pointer;
-  min-height: 44px;
-}
-
-@media (max-width: 768px) {
-  .agreement-summary-grid {
-    grid-template-columns: 1fr;
-  }
-  .agreement-header {
-    flex-direction: column;
-  }
-  .agreement-header-meta {
-    text-align: left;
-  }
-  .agreement-footer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
+.agreement-view-page { background: #eef1f5; min-height: 100vh; padding: 2rem; }
+.agreement-state { color: #334155; min-height: 50vh; padding: 4rem 1.5rem; text-align: center; }
+.agreement-state--error { color: #b91c1c; }
+.agreement-controls, .agreement-workflow { margin: 0 auto 1.25rem; max-width: 794px; }
+.agreement-controls { align-items: center; display: flex; justify-content: space-between; gap: 1rem; }
+.agreement-controls__actions, .agreement-actions-row { align-items: center; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.agreement-view-page .btn-primary, .agreement-view-page .btn-outline, .agreement-view-page .btn-danger { border-radius: 7px; cursor: pointer; font-weight: 650; min-height: 2.6rem; padding: 0.6rem 0.95rem; }
+.agreement-view-page .btn-primary { background: #1d4ed8; border: 1px solid #1d4ed8; color: #fff; }
+.agreement-view-page .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #334155; }
+.agreement-view-page .btn-danger { background: #b91c1c; border: 1px solid #b91c1c; color: #fff; }
+.agreement-view-page button:disabled { cursor: not-allowed; opacity: 0.6; }
+.agreement-document { background: #fff; box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12); box-sizing: border-box; color: #1e293b; margin: 0 auto; max-width: 794px; min-height: 1123px; padding: 4rem 4.5rem; }
+.agreement-document__header { border-bottom: 2px solid #1e3a5f; display: flex; gap: 2rem; justify-content: space-between; padding-bottom: 1.5rem; }
+.agreement-document__eyebrow { color: #64748b; font-size: 0.67rem; font-weight: 700; letter-spacing: 0.14em; margin: 0 0 0.55rem; text-transform: uppercase; }
+.agreement-document h1 { color: #0f172a; font-family: Georgia, 'Times New Roman', serif; font-size: 2rem; font-weight: 600; letter-spacing: 0.03em; margin: 0; text-transform: uppercase; }
+.agreement-document__reference { color: #475569; font-size: 0.9rem; margin: 0.55rem 0 0; }
+.agreement-document__meta { display: grid; gap: 0.75rem; min-width: 130px; text-align: right; }
+.agreement-document__meta span, .agreement-document__details span { color: #64748b; display: block; font-size: 0.71rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.22rem; text-transform: uppercase; }
+.agreement-document__meta strong { color: #1e293b; font-size: 0.88rem; font-weight: 600; }
+.agreement-document__intro { border-bottom: 1px solid #dbe3ec; color: #475569; font-family: Georgia, 'Times New Roman', serif; font-size: 0.98rem; font-style: italic; line-height: 1.7; padding: 1.5rem 0; }
+.agreement-document__section { break-inside: avoid; margin-top: 2rem; page-break-inside: avoid; }
+.agreement-document__section h2 { border-bottom: 1px solid #cbd5e1; color: #163e68; font-family: Georgia, 'Times New Roman', serif; font-size: 1.05rem; font-weight: 700; margin: 0 0 1rem; padding-bottom: 0.5rem; }
+.agreement-document__details { display: grid; gap: 1rem 2rem; }
+.agreement-document__details--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.agreement-document__details strong { color: #1e293b; font-size: 0.94rem; font-weight: 600; line-height: 1.5; }
+.agreement-document__terms-content { color: #334155; font-family: Georgia, 'Times New Roman', serif; font-size: 0.95rem; line-height: 1.8; white-space: pre-wrap; }
+.agreement-document__signatures p { color: #475569; font-size: 0.9rem; line-height: 1.55; margin: 0 0 2.5rem; }
+.agreement-document__signature-grid { display: grid; gap: 3rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.signature-line { border-bottom: 1px solid #334155; color: #1e3a5f; font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 1.25rem; height: 2.5rem; margin-bottom: 0.55rem; }
+.agreement-signature--signed .signature-line { border-bottom-color: #166534; }
+.agreement-document__fully-signed { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-size: 0.85rem; font-weight: 700; margin-top: 1.5rem; padding: 0.65rem 0.8rem; text-align: center; text-transform: uppercase; }
+.agreement-document__signature-grid strong { display: block; font-size: 0.9rem; }
+.agreement-document__signature-grid span { color: #64748b; display: block; font-size: 0.75rem; line-height: 1.4; margin-top: 0.25rem; }
+.agreement-document__footer { border-top: 1px solid #cbd5e1; color: #64748b; font-size: 0.72rem; letter-spacing: 0.04em; margin-top: 3rem; padding-top: 1rem; text-align: center; text-transform: uppercase; }
+.agreement-workflow { background: #fff; border: 1px solid #dbe3ec; border-radius: 10px; box-sizing: border-box; padding: 1.25rem; }
+.agreement-workflow__header { align-items: center; display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.agreement-workflow__header h2 { color: #0f172a; font-size: 1rem; margin: 0; }
+.agreement-status-badge { background: #e0e7ff; border-radius: 99px; color: #3730a3; font-size: 0.72rem; font-weight: 700; letter-spacing: .04em; padding: .4rem .65rem; text-transform: uppercase; }
+.agreement-status-sent { background: #fef3c7; color: #92400e; }.agreement-status-final_pending, .agreement-status-accepted { background: #dcfce7; color: #166534; }.agreement-status-executed, .agreement-status-locked { background: #dbeafe; color: #1d4ed8; }.agreement-status-declined, .agreement-status-changes_requested { background: #fee2e2; color: #991b1b; }
+.agreement-signed-status { align-items: center; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 7px; color: #166534; display: inline-flex; font-size: 0.84rem; font-weight: 650; min-height: 2.6rem; padding: 0 0.8rem; }
+.agreement-select-label, .new-version-panel label { display: grid; gap: .4rem; }
+.agreement-select-label span, .new-version-panel span { color: #475569; font-size: .78rem; font-weight: 700; }
+.agreement-select-label select, .new-version-panel input, .new-version-panel textarea { border: 1px solid #cbd5e1; border-radius: 7px; color: #1e293b; font: inherit; padding: .6rem .7rem; }
+.new-version-panel { border-top: 1px solid #e2e8f0; display: grid; gap: 1rem; margin-top: 1.25rem; padding-top: 1.25rem; }
+.new-version-panel textarea { min-height: 10rem; resize: vertical; }
+.agreement-signature-modal { align-items: center; background: rgba(15, 23, 42, 0.58); display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 1300; }
+.agreement-signature-modal__card { background: #fff; border-radius: 14px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25); box-sizing: border-box; max-width: 460px; padding: 2rem; width: 100%; }
+.agreement-signature-modal__card h2 { color: #0f172a; font-size: 1.35rem; margin: 0 0 0.65rem; }
+.agreement-signature-modal__card p { color: #475569; line-height: 1.55; margin: 0 0 1.25rem; }
+.agreement-signature-modal__card label { display: grid; gap: 0.45rem; }
+.agreement-signature-modal__card label span { color: #334155; font-size: 0.86rem; font-weight: 700; }
+.agreement-signature-modal__card input { border: 1px solid #94a3b8; border-radius: 7px; font: inherit; min-height: 2.75rem; padding: 0.65rem 0.75rem; }
+.agreement-signature-modal__card input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); outline: none; }
+.agreement-signature-modal__error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 0.88rem; margin-top: 1rem; padding: 0.65rem 0.75rem; }
+.agreement-signature-modal__actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+@media (max-width: 760px) { .agreement-view-page { padding: 1rem; }.agreement-document { min-height: auto; padding: 2rem 1.5rem; }.agreement-document__header { flex-direction: column; gap: 1rem; }.agreement-document__meta { grid-template-columns: repeat(2, 1fr); text-align: left; }.agreement-document__details--two, .agreement-document__signature-grid { grid-template-columns: 1fr; }.agreement-document__signature-grid { gap: 2rem; }.agreement-controls { align-items: stretch; flex-direction: column; }.agreement-controls > *, .agreement-controls__actions > * { flex: 1; }.agreement-controls__actions { display: flex; }.agreement-workflow__header { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 420px) { .agreement-document { padding: 1.5rem 1rem; }.agreement-document h1 { font-size: 1.55rem; }.agreement-document__meta { grid-template-columns: 1fr; }.agreement-controls__actions, .agreement-actions-row { flex-direction: column; align-items: stretch; }.agreement-actions-row > * { width: 100%; } }
+@media print { @page { size: A4; margin: 12mm; } body * { visibility: hidden !important; } .agreement-document, .agreement-document * { visibility: visible !important; } .agreement-document { box-shadow: none !important; display: block; left: 0; margin: 0; max-width: none; min-height: 0; padding: 0; position: absolute; top: 0; width: 100%; } .agreement-document__section { break-inside: avoid; page-break-inside: avoid; } .agreement-document__footer { margin-top: 2rem; } }

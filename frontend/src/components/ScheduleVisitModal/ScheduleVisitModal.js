@@ -47,7 +47,7 @@ const ScheduleVisitModal = ({ open, onClose, property, applicationId, onSubmit }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay schedule-visit-overlay" onClick={onClose}>
       <div className="modal-content schedule-visit-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-close" onClick={onClose} aria-label="Close">×</button>
         <div className="schedule-visit-body">

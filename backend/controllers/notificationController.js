@@ -12,6 +12,7 @@ const getNotifications = async (req, res) => {
 
     const notifications = await Notification.find(filter)
       .populate("room", "title image")
+      .populate("agreement", "agreementId currentVersion")
       .populate("fromUser", "name")
       .populate({
         path: "application",

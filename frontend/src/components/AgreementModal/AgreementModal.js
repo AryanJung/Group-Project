@@ -61,7 +61,7 @@ const AgreementModal = ({ open, onClose, application, property, onCreated }) => 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay agreement-modal-overlay" onClick={onClose}>
       <div className="modal-content agreement-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-close" onClick={onClose} aria-label="Close">×</button>
         <div className="agreement-body">

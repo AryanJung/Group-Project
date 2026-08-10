@@ -5,6 +5,7 @@ const {
   createAgreement,
   createVersion,
   sendVersion,
+  signVersionAsLandlord,
   requestChanges,
   acceptVersion,
   executeAgreement,
@@ -20,6 +21,8 @@ router.post('/', protect, createAgreement);
 router.post('/:id/versions', protect, createVersion);
 // Landlord sends a specific version to tenant
 router.post('/:id/versions/send', protect, sendVersion);
+// Landlord signs a draft version before sending it to the tenant
+router.post('/:id/versions/sign', protect, signVersionAsLandlord);
 // Tenant requests changes
 router.post('/:id/versions/request-changes', protect, requestChanges);
 // Tenant accepts a version

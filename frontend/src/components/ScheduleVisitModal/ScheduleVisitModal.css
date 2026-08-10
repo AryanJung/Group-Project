@@ -1,1 +1,181 @@
-.modal-overlay{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:1200}.modal-content.schedule-visit-modal{background:#fff;border-radius:12px;padding:20px;max-width:520px;width:92%;box-shadow:0 12px 40px rgba(2,6,23,0.12);position:relative}.modal-close{position:absolute;right:12px;top:8px;background:none;border:none;font-size:20px;cursor:pointer}.schedule-visit-body h2{margin:0 0 8px}.schedule-visit-body .muted{color:#6b7280;margin-bottom:10px}.schedule-visit-form label{display:block;margin-bottom:12px}.schedule-visit-form span{display:block;font-size:0.9rem;color:#374151;margin-bottom:6px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}.modal-error{color:#b91c1c;margin-top:6px}
+.schedule-visit-overlay {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1.5rem;
+  position: fixed;
+  z-index: 1200;
+}
+
+.modal-content.schedule-visit-modal {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
+  box-sizing: border-box;
+  max-height: calc(100vh - 3rem);
+  max-width: 540px;
+  overflow-y: auto;
+  padding: 2rem;
+  position: relative;
+  width: min(100%, 540px);
+}
+
+.schedule-visit-modal .modal-close {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  font-size: 1.5rem;
+  height: 2.25rem;
+  justify-content: center;
+  line-height: 1;
+  padding: 0 0 0.1rem;
+  position: absolute;
+  right: 1.25rem;
+  top: 1.25rem;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  width: 2.25rem;
+}
+
+.schedule-visit-modal .modal-close:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  transform: rotate(90deg);
+}
+
+.schedule-visit-modal .modal-close:focus-visible,
+.schedule-visit-modal input:focus-visible,
+.schedule-visit-modal button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.25);
+  outline-offset: 2px;
+}
+
+.schedule-visit-body h2 {
+  color: #0f172a;
+  font-size: 1.45rem;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 0 3rem 0.45rem 0;
+}
+
+.schedule-visit-body .muted {
+  background: #f8fafc;
+  border-left: 3px solid #2563eb;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0 0 1.5rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.schedule-visit-body .muted strong {
+  color: #334155;
+}
+
+.schedule-visit-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.schedule-visit-form label {
+  display: block;
+  margin: 0;
+}
+
+.schedule-visit-form span {
+  color: #334155;
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 650;
+  margin-bottom: 0.45rem;
+}
+
+.schedule-visit-form input {
+  appearance: none;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  box-sizing: border-box;
+  color: #1e293b;
+  font: inherit;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.8rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+}
+
+.schedule-visit-form input:hover {
+  border-color: #94a3b8;
+}
+
+.schedule-visit-form input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+
+.schedule-visit-modal .modal-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+}
+
+.schedule-visit-modal .modal-actions {
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+}
+
+.schedule-visit-modal .btn-primary,
+.schedule-visit-modal .btn-outline {
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 650;
+  min-height: 2.7rem;
+  padding: 0.65rem 1rem;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.schedule-visit-modal .btn-primary {
+  background: #1d4ed8;
+  box-shadow: 0 2px 5px rgba(29, 78, 216, 0.2);
+}
+
+.schedule-visit-modal .btn-primary:hover:not(:disabled) {
+  background: #1e40af;
+  box-shadow: 0 5px 12px rgba(29, 78, 216, 0.25);
+  transform: translateY(-1px);
+}
+
+.schedule-visit-modal .btn-outline {
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.schedule-visit-modal .btn-outline:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+@media (max-width: 540px) {
+  .schedule-visit-overlay { padding: 0.75rem; }
+  .modal-content.schedule-visit-modal { border-radius: 14px; max-height: calc(100vh - 1.5rem); padding: 1.5rem; }
+  .schedule-visit-modal .modal-close { right: 0.9rem; top: 0.9rem; }
+  .schedule-visit-modal .modal-actions { flex-direction: column-reverse; }
+  .schedule-visit-modal .btn-primary, .schedule-visit-modal .btn-outline { width: 100%; }
+}

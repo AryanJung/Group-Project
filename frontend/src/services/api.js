@@ -383,12 +383,16 @@ export const agreementAPI = {
     const response = await api.post(`/agreements/${agreementId}/versions/send`, { versionNumber });
     return response.data;
   },
+  signVersion: async (agreementId, versionNumber, signatureName) => {
+    const response = await api.post(`/agreements/${agreementId}/versions/sign`, { versionNumber, signatureName });
+    return response.data;
+  },
   requestChanges: async (agreementId, versionNumber, requestedChanges) => {
     const response = await api.post(`/agreements/${agreementId}/versions/request-changes`, { versionNumber, requestedChanges });
     return response.data;
   },
-  acceptVersion: async (agreementId, versionNumber) => {
-    const response = await api.post(`/agreements/${agreementId}/versions/accept`, { versionNumber });
+  acceptVersion: async (agreementId, versionNumber, signatureName) => {
+    const response = await api.post(`/agreements/${agreementId}/versions/accept`, { versionNumber, signatureName });
     return response.data;
   },
   decline: async (agreementId) => {

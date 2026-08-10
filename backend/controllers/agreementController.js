@@ -72,6 +72,8 @@ const createAgreement = async (req, res) => {
       type: 'agreement_created',
       room: agreement.room,
       application: application._id,
+      agreement: agreement._id,
+      agreementVersion: version.versionNumber,
       fromUser: req.user._id,
       message: `A rental agreement draft (${agreement.agreementId}) has been created for "${application.room.title}"`,
     });
@@ -118,7 +120,7 @@ const createVersion = async (req, res) => {
     await AuditLog.create({ actor: req.user._id, action: 'version_created', resourceType: 'Agreement', resourceId: agreement._id, metadata: { version: nextVersionNumber } });
 
     // Notify tenant that a new version is available
-    await Notification.create({ recipient: agreement.tenant, type: 'version_created', application: undefined, room: agreement.room, fromUser: req.user._id, message: `A new version (${nextVersionNumber}) of agreement ${agreement.agreementId} is available.` });
+    await Notification.create({ recipient: agreement.tenant, type: 'version_created', application: undefined, room: agreement.room, agreement: agreement._id, agreementVersion: version.versionNumber, fromUser: req.user._id, message: `A new version (${nextVersionNumber}) of agreement ${agreement.agreementId} is available.` });
 
     return res.status(201).json(version);
   } catch (error) {
@@ -152,11 +154,47 @@ const sendVersion = async (req, res) => {
 
     await AuditLog.create({ actor: req.user._id, action: 'version_sent', resourceType: 'Agreement', resourceId: agreement._id, metadata: { version: version.versionNumber } });
 
-    await Notification.create({ recipient: agreement.tenant, type: 'agreement_sent', application: undefined, room: agreement.room, fromUser: req.user._id, message: `Agreement ${agreement.agreementId} (v${version.versionNumber}) has been sent to you for review.` });
+    await Notification.create({ recipient: agreement.tenant, type: 'agreement_sent', application: undefined, room: agreement.room, agreement: agreement._id, agreementVersion: version.versionNumber, fromUser: req.user._id, message: `Agreement ${agreement.agreementId} (v${version.versionNumber}) has been sent to you for review.` });
 
     return res.status(200).json({ agreement, version });
   } catch (error) {
     console.error('sendVersion error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Landlord electronically signs a draft before it is sent to the tenant.
+const signVersionAsLandlord = async (req, res) => {
+  try {
+    const signatureName = req.body.signatureName?.trim();
+    if (!signatureName) return res.status(400).json({ message: 'A full name is required to sign the agreement' });
+
+    const agreement = await Agreement.findById(req.params.id);
+    if (!agreement) return res.status(404).json({ message: 'Agreement not found' });
+    if (agreement.landlord.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the landlord can sign on behalf of the landlord' });
+    }
+
+    const version = await AgreementVersion.findOne({ agreement: agreement._id, versionNumber: req.body.versionNumber });
+    if (!version) return res.status(404).json({ message: 'Version not found' });
+    if (version.status !== 'draft') return res.status(400).json({ message: 'Only a draft version can be signed before sending' });
+
+    const existing = await Acceptance.findOne({ agreement: agreement._id, version: version._id, user: req.user._id });
+    if (existing) return res.status(400).json({ message: 'You have already signed this version' });
+
+    const acceptance = await Acceptance.create({
+      agreement: agreement._id,
+      version: version._id,
+      user: req.user._id,
+      signatureName,
+      authenticationMethod: 'electronic_acceptance',
+      role: 'landlord',
+      acceptedAt: new Date(),
+    });
+    await AuditLog.create({ actor: req.user._id, action: 'agreement_signed_by_landlord', resourceType: 'Agreement', resourceId: agreement._id, metadata: { version: version.versionNumber } });
+    return res.status(200).json({ acceptance });
+  } catch (error) {
+    console.error('signVersionAsLandlord error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -182,7 +220,7 @@ const requestChanges = async (req, res) => {
     await AuditLog.create({ actor: req.user._id, action: 'changes_requested', resourceType: 'Agreement', resourceId: agreement._id, metadata: { version: versionNumber, requestedChanges } });
 
     // Notify landlord
-    await Notification.create({ recipient: agreement.landlord, type: 'changes_requested', application: undefined, room: agreement.room, fromUser: req.user._id, message: `Tenant requested changes on agreement ${agreement.agreementId} (v${versionNumber})` });
+    await Notification.create({ recipient: agreement.landlord, type: 'changes_requested', application: undefined, room: agreement.room, agreement: agreement._id, agreementVersion: versionNumber, fromUser: req.user._id, message: `Tenant requested changes on agreement ${agreement.agreementId} (v${versionNumber})` });
 
     return res.status(200).json({ message: 'Change request recorded' });
   } catch (error) {
@@ -209,12 +247,13 @@ const acceptVersion = async (req, res) => {
       return res.status(400).json({ message: 'Only a sent version can be accepted' });
     }
 
-    // Record acceptance
-    await Acceptance.findOneAndUpdate(
-      { agreement: agreement._id, version: version._id, user: req.user._id },
-      { agreement: agreement._id, version: version._id, user: req.user._id, authenticationMethod: 'electronic_acceptance', role: 'tenant', acceptedAt: new Date() },
-      { upsert: true, new: true }
-    );
+    const signatureName = req.body.signatureName?.trim();
+    if (!signatureName) return res.status(400).json({ message: 'A full name is required to sign the agreement' });
+    const existingAcceptance = await Acceptance.findOne({ agreement: agreement._id, version: version._id, user: req.user._id });
+    if (existingAcceptance) return res.status(400).json({ message: 'You have already signed this version' });
+
+    // Record tenant acceptance and its electronic signature.
+    await Acceptance.create({ agreement: agreement._id, version: version._id, user: req.user._id, signatureName, authenticationMethod: 'electronic_acceptance', role: 'tenant', acceptedAt: new Date() });
 
     version.status = 'accepted';
     await version.save();
@@ -225,7 +264,7 @@ const acceptVersion = async (req, res) => {
     await AuditLog.create({ actor: req.user._id, action: 'version_accepted_by_tenant', resourceType: 'Agreement', resourceId: agreement._id, metadata: { version: version.versionNumber } });
 
     // Notify landlord
-    await Notification.create({ recipient: agreement.landlord, type: 'agreement_accepted', room: agreement.room, application: undefined, fromUser: req.user._id, message: `Tenant accepted agreement ${agreement.agreementId} (v${version.versionNumber})` });
+    await Notification.create({ recipient: agreement.landlord, type: 'agreement_accepted', room: agreement.room, application: undefined, agreement: agreement._id, agreementVersion: version.versionNumber, fromUser: req.user._id, message: `Tenant accepted agreement ${agreement.agreementId} (v${version.versionNumber})` });
 
     // Create Rental record so tenant immediately sees the property in My Rentals
     try {
@@ -274,12 +313,11 @@ const executeAgreement = async (req, res) => {
       return res.status(400).json({ message: 'Tenant has not accepted this version yet' });
     }
 
-    // Record landlord acceptance
-    await Acceptance.findOneAndUpdate(
-      { agreement: agreement._id, version: version._id, user: req.user._id },
-      { agreement: agreement._id, version: version._id, user: req.user._id, authenticationMethod: 'account_auth', role: 'landlord', acceptedAt: new Date() },
-      { upsert: true, new: true }
-    );
+    // Preserve the landlord's original electronic signature when finalizing.
+    const landlordAcceptance = await Acceptance.findOne({ agreement: agreement._id, version: version._id, user: req.user._id });
+    if (!landlordAcceptance) {
+      await Acceptance.create({ agreement: agreement._id, version: version._id, user: req.user._id, authenticationMethod: 'account_auth', role: 'landlord', acceptedAt: new Date() });
+    }
 
     // Mark as executed and lock
     version.status = 'executed';
@@ -298,7 +336,7 @@ const executeAgreement = async (req, res) => {
     await AuditLog.create({ actor: req.user._id, action: 'agreement_executed', resourceType: 'Agreement', resourceId: agreement._id, metadata: { version: version.versionNumber } });
 
     // Notify tenant
-    await Notification.create({ recipient: agreement.tenant, type: 'agreement_executed', room: agreement.room, application: undefined, fromUser: req.user._id, message: `Agreement ${agreement.agreementId} has been executed and locked.` });
+    await Notification.create({ recipient: agreement.tenant, type: 'agreement_executed', room: agreement.room, application: undefined, agreement: agreement._id, agreementVersion: version.versionNumber, fromUser: req.user._id, message: `Agreement ${agreement.agreementId} has been executed and locked.` });
 
     // Ensure a Rental record exists (safeguard) so My Rentals is populated
     try {
@@ -339,7 +377,7 @@ const getAgreement = async (req, res) => {
     }
 
     const versions = await AgreementVersion.find({ agreement: agreement._id }).sort({ versionNumber: 1 });
-    const acceptances = await Acceptance.find({ agreement: agreement._id });
+    const acceptances = await Acceptance.find({ agreement: agreement._id }).populate('user', 'name');
 
     return res.status(200).json({ agreement, versions, acceptances });
   } catch (error) {
@@ -396,7 +434,7 @@ const declineVersion = async (req, res) => {
 
     await AuditLog.create({ actor: req.user._id, action: 'agreement_declined', resourceType: 'Agreement', resourceId: agreement._id });
 
-    await Notification.create({ recipient: agreement.landlord, type: 'agreement_declined', room: agreement.room, application: undefined, fromUser: req.user._id, message: `Tenant declined agreement ${agreement.agreementId}.` });
+    await Notification.create({ recipient: agreement.landlord, type: 'agreement_declined', room: agreement.room, agreement: agreement._id, agreementVersion: agreement.currentVersion, fromUser: req.user._id, message: `Tenant declined agreement ${agreement.agreementId}.` });
 
     return res.status(200).json({ message: 'Agreement declined' });
   } catch (error) {
@@ -409,6 +447,7 @@ module.exports = {
   createAgreement,
   createVersion,
   sendVersion,
+  signVersionAsLandlord,
   requestChanges,
   acceptVersion,
   executeAgreement,

@@ -6,6 +6,7 @@ const acceptanceSchema = new mongoose.Schema(
     version: { type: mongoose.Schema.Types.ObjectId, ref: 'AgreementVersion', required: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     acceptedAt: { type: Date, default: Date.now },
+    signatureName: { type: String, trim: true },
     authenticationMethod: { type: String, enum: ['account_auth', 'electronic_acceptance'], default: 'account_auth' },
     role: { type: String, enum: ['tenant', 'landlord'], required: true },
   },

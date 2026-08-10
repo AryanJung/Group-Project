@@ -10,6 +10,11 @@ import logo from '../cut.png';
 // Returns the navigation destination for a notification
 const getNotificationDestination = (notification) => {
   const roomId = notification.room?._id || notification.room;
+  const agreementId = notification.agreement?._id || notification.agreement;
+  if (agreementId) {
+    const version = notification.agreementVersion;
+    return `/agreements/${agreementId}${version ? `?version=${version}` : ''}`;
+  }
   switch (notification.type) {
     case 'new_application':
       return roomId ? `/admin?tab=applications&room=${roomId}` : '/admin';
@@ -33,6 +38,13 @@ const typeLabel = {
   kyc_rejected: 'KYC Rejected',
   property_approved: 'Property Approved',
   property_rejected: 'Property Rejected',
+  agreement_created: 'Agreement Created',
+  version_created: 'New Agreement Version',
+  agreement_sent: 'Agreement Ready for Review',
+  changes_requested: 'Agreement Changes Requested',
+  agreement_accepted: 'Agreement Accepted',
+  agreement_executed: 'Agreement Executed',
+  agreement_declined: 'Agreement Declined',
 };
 
 // ─── Notification Bell ────────────────────────────────────────────────────────
