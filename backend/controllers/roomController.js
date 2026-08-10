@@ -10,6 +10,27 @@ const parsePrice = (price) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+// Parse coordinates from FormData: multipart bodies can only carry strings,
+// so the frontend JSON.stringifies the {lat, lng} object before appending it.
+// We must parse it back here before storing it in Mongoose.
+const parseCoordinates = (raw) => {
+  if (!raw) return undefined;
+  if (typeof raw === 'object') return raw; // already an object
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.lat === 'number' &&
+      typeof parsed.lng === 'number'
+    ) {
+      return parsed;
+    }
+  } catch (_) {
+    // ignore malformed JSON
+  }
+  return undefined;
+};
+
 // Create a new room
 const createRoom = async (req, res) => {
   try {
@@ -38,6 +59,8 @@ const createRoom = async (req, res) => {
       return res.status(400).json({ message: 'Please upload at least one image of the property.' });
     }
 
+    const parsedCoords = parseCoordinates(coordinates);
+
     const room = await Room.create({
       title,
       description:
@@ -54,7 +77,7 @@ const createRoom = async (req, res) => {
         ].filter(Boolean),
       price: parsePrice(price),
       location,
-      coordinates: coordinates || undefined,
+      coordinates: parsedCoords,
       bedrooms,
       bathrooms,
       area,
@@ -67,8 +90,7 @@ const createRoom = async (req, res) => {
     res.status(201).json(room);
  } catch (error) {
     console.error("🔴 BACKEND UPLOAD ERROR DETAILS:");
-    console.error(error); // This prints the entire error object/stack trace without wrapping it as an object string
-    // ─────────────────────────────────────────────────────────────────
+    console.error(error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -182,7 +204,8 @@ const updateRoom = async (req, res) => {
     room.features = features || room.features;
     room.price = price !== undefined ? parsePrice(price) : room.price;
     room.location = location || room.location;
-    if (coordinates) room.coordinates = coordinates;
+    // coordinates arrives as a JSON string from multipart FormData — parse it.
+    if (coordinates) room.coordinates = parseCoordinates(coordinates);
     room.bedrooms = bedrooms !== undefined ? bedrooms : room.bedrooms;
     room.bathrooms = bathrooms !== undefined ? bathrooms : room.bathrooms;
     room.area = area || room.area;

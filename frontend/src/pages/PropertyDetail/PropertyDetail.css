@@ -616,3 +616,301 @@
     aspect-ratio: 16 / 10;
   }
 }
+
+/* ── Map modal ──────────────────────────────────────────────────────────────── */
+
+.map-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 23, 71, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: map-modal-fade-in 0.2s ease;
+}
+
+@keyframes map-modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.map-modal-content {
+  width: 100%;
+  max-width: 860px;
+  height: 78vh;
+  min-height: 420px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(5, 23, 71, 0.28);
+  display: flex;
+  flex-direction: column;
+  animation: map-modal-slide-up 0.22s ease;
+}
+
+@keyframes map-modal-slide-up {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.map-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e9f2;
+  background: #f8f9fc;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.map-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #051747;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.map-modal-close {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: #e5e9f2;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #051747;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.map-modal-close:hover {
+  background: #d0d6e8;
+  transform: scale(1.1);
+}
+
+.map-modal-map {
+  flex: 1;
+  width: 100%;
+}
+
+/* "Approximate" pill shown when geocoding is used instead of exact coords */
+.map-approx-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* Error state — shown when both coords and geocoding fail */
+.map-modal-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #f8f9fc;
+  color: #535f80;
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* Google Maps fallback link shown inside the error panel */
+.map-fallback-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.4rem;
+  background: #4285F4;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.12s;
+}
+
+.map-fallback-link:hover {
+  background: #3367d6;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+  .map-modal-content {
+    height: 90vh;
+    border-radius: 12px;
+  }
+}
+
+/* ── Loading state (geocoding in progress) ───────────────────────────────── */
+.map-modal-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: #f8f9fc;
+  color: #535f80;
+  font-size: 0.9rem;
+}
+
+.map-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e9f2;
+  border-top-color: #3b5bdb;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Static image fallback (no WebGL) ────────────────────────────────────── */
+.map-static-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #e8ecf5;
+}
+
+.map-static-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Amber banner shown at the bottom when location is approximate */
+.map-static-note {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(254, 243, 199, 0.95);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Small info pill at the very bottom */
+.map-static-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.88);
+  color: #535f80;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── Static map: clickable container & hover overlay ─────────────────────── */
+
+/* The <a> wrapping the static image */
+.map-static-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #e8ecf5;
+  display: block;          /* <a> defaults to inline */
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.map-static-container:focus-visible {
+  outline: 3px solid #3b5bdb;
+  outline-offset: -3px;
+}
+
+/* Hover-reveal "Open in Google Maps" pill centred on the image */
+.map-open-gmaps-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: rgba(26, 26, 26, 0.82);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.map-static-container:hover .map-open-gmaps-overlay,
+.map-static-container:focus-visible .map-open-gmaps-overlay {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* ── Interactive GL map: persistent "Open in Google Maps" button ─────────── */
+.map-gmaps-btn {
+  position: absolute;
+  bottom: 36px;    /* sits just above the Mapbox attribution bar */
+  left: 10px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1a1a2e;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.map-gmaps-btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}

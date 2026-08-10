@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@mapbox/mapbox-gl-geocoder": "^5.1.2",
     "cloudinary": "^1.41.3",
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^4.0.0"
