@@ -41,7 +41,7 @@ const buildStaticMapUrl = (center, zoom, pinHex, token) => {
 //  'static'    → show Mapbox Static Image (works everywhere, no WebGL)
 //  'upgrading' → attempt to mount interactive GL map on top of static
 //  'failed'    → both coords and geocoding failed → Google Maps link
-const MapModal = ({ coordinates, locationName, onClose }) => {
+export const MapModal = ({ coordinates, locationName, onClose }) => {
   const mapContainer  = useRef(null);
   const mapRef        = useRef(null);
   const [phase,           setPhase]           = useState('resolving');
@@ -334,6 +334,8 @@ const PropertyDetail = () => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Map modal state
   const [showMap, setShowMap] = useState(false);
@@ -601,11 +603,28 @@ const PropertyDetail = () => {
 
   const images = getPropertyImages(property);
   const videos = getPropertyVideos(property);
+  const roomImages = property.roomImages || [];
   const features = buildPropertyFeatures(property);
   const descriptionParagraphs = formatDescription(
     property.description || 'No property description has been added yet.'
   );
   const hasGallery = images.length > 0;
+  const openLightbox = (imageSet, index) => {
+    setLightboxImages(imageSet);
+    setLightboxIndex(index);
+  };
+  const closeLightbox = () => {
+    setLightboxImages([]);
+    setLightboxIndex(0);
+  };
+  const showPreviousImage = (event) => {
+    event.stopPropagation();
+    setLightboxIndex((index) => (index === 0 ? lightboxImages.length - 1 : index - 1));
+  };
+  const showNextImage = (event) => {
+    event.stopPropagation();
+    setLightboxIndex((index) => (index === lightboxImages.length - 1 ? 0 : index + 1));
+  };
 
   return (
     <>
@@ -623,11 +642,18 @@ const PropertyDetail = () => {
           {hasGallery ? (
             <div className="property-gallery">
               <div className="gallery-main">
-                <img
-                  src={images[activeImageIndex]}
-                  alt={`${property.title} - view ${activeImageIndex + 1}`}
-                  className="gallery-main-image"
-                />
+                <button
+                  type="button"
+                  className="gallery-main-button"
+                  onClick={() => openLightbox(images, activeImageIndex)}
+                  aria-label={`Open ${property.title} photo ${activeImageIndex + 1}`}
+                >
+                  <img
+                    src={images[activeImageIndex]}
+                    alt={`${property.title} - view ${activeImageIndex + 1}`}
+                    className="gallery-main-image"
+                  />
+                </button>
                 {images.length > 1 && (
                   <span className="gallery-counter">
                     {activeImageIndex + 1} / {images.length}
@@ -839,6 +865,31 @@ const PropertyDetail = () => {
           </div>
         </section>
 
+        {roomImages.length > 0 && (
+          <section className="property-section property-room-images-section">
+            <h2 className="section-heading">Room Images</h2>
+            <div className="room-images-grid">
+              {roomImages.map((room, roomIndex) => (
+                <article key={`${room.label || 'room'}-${roomIndex}`} className="room-images-card">
+                  <h3>{room.label || `Room ${roomIndex + 1}`}</h3>
+                  <div className="room-images-card__photos">
+                    {(room.images || []).map((src, imageIndex) => (
+                      <button
+                        key={src + imageIndex}
+                        type="button"
+                        onClick={() => openLightbox(room.images || [], imageIndex)}
+                        aria-label={`Open ${room.label || `Room ${roomIndex + 1}`} image ${imageIndex + 1}`}
+                      >
+                        <img src={src} alt={`${room.label || `Room ${roomIndex + 1}`} ${imageIndex + 1}`} />
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Videos */}
         {videos.length > 0 && (
           <section className="property-section property-videos-section">
@@ -951,6 +1002,22 @@ const PropertyDetail = () => {
         locationName={property?.location}
         onClose={() => setShowMap(false)}
       />
+    )}
+    {lightboxImages.length > 0 && (
+      <div className="image-lightbox" onClick={closeLightbox}>
+        <button type="button" className="image-lightbox__close" onClick={closeLightbox} aria-label="Close image preview">×</button>
+        {lightboxImages.length > 1 && (
+          <button type="button" className="image-lightbox__nav image-lightbox__nav--prev" onClick={showPreviousImage} aria-label="Previous image">‹</button>
+        )}
+        <img
+          src={lightboxImages[lightboxIndex]}
+          alt={`Full size view ${lightboxIndex + 1}`}
+          onClick={(event) => event.stopPropagation()}
+        />
+        {lightboxImages.length > 1 && (
+          <button type="button" className="image-lightbox__nav image-lightbox__nav--next" onClick={showNextImage} aria-label="Next image">›</button>
+        )}
+      </div>
     )}
     </>
   );

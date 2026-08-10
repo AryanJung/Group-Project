@@ -15,6 +15,7 @@ const agreementSchema = new mongoose.Schema(
         'final_pending',
         'executed',
         'locked',
+        'declined',
         'terminated',
       ],
       default: 'draft',

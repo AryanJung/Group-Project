@@ -8,7 +8,7 @@ const agreementVersionSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     changeSummary: { type: String },
     previousVersion: { type: mongoose.Schema.Types.ObjectId, ref: 'AgreementVersion' },
-    status: { type: String, enum: ['draft', 'sent', 'accepted', 'executed', 'locked'], default: 'draft' },
+    status: { type: String, enum: ['draft', 'sent', 'accepted', 'declined', 'executed', 'locked'], default: 'draft' },
   },
   { timestamps: true }
 );

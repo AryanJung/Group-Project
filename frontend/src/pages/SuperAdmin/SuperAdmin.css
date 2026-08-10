@@ -439,6 +439,160 @@
   cursor: not-allowed;
 }
 
+.property-review-actions {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.property-review-actions button {
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+}
+
+.property-review-actions__secondary {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.property-review-actions__approve {
+  background: var(--orange);
+  color: #fff;
+}
+
+.property-review-actions__reject {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+.property-review-modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+  max-height: 90vh;
+  max-width: min(980px, 100%);
+  overflow-y: auto;
+  padding: 1.5rem;
+  position: relative;
+  width: 100%;
+}
+
+.property-review-modal__header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+}
+
+.property-review-modal__header h2 {
+  color: var(--navy);
+  margin: 0 2rem 0.35rem 0;
+}
+
+.property-review-modal__header p {
+  margin: 0;
+}
+
+.property-review-modal__header button {
+  background: var(--navy);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.65rem 1rem;
+}
+
+.property-review-modal__grid,
+.property-review-modal__rooms article > div {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.property-review-modal__grid button,
+.property-review-modal__rooms button {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+}
+
+.property-review-modal__grid img,
+.property-review-modal__rooms img {
+  aspect-ratio: 4 / 3;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.property-review-modal__details {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin: 1.25rem 0;
+}
+
+.property-review-modal__details div {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0.75rem;
+}
+
+.property-review-modal__details strong,
+.property-review-modal__details span {
+  display: block;
+}
+
+.property-review-modal section {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.property-review-modal section h3 {
+  color: var(--navy);
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.property-review-modal__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.property-review-modal__tags span {
+  background: #f0f4ff;
+  border: 1px solid #d4ddf5;
+  border-radius: 999px;
+  color: var(--navy);
+  font-size: 0.84rem;
+  padding: 0.4rem 0.75rem;
+}
+
+.property-review-modal__rooms {
+  display: grid;
+  gap: 1rem;
+}
+
+.property-review-modal__rooms article strong {
+  color: var(--navy);
+  display: block;
+  margin-bottom: 0.55rem;
+}
+
 @media (max-width: 768px) {
   .superadmin-header {
     flex-direction: column;

@@ -25,6 +25,7 @@ const notificationSchema = new mongoose.Schema(
         "changes_requested",
         "version_created",
         "agreement_accepted",
+        "agreement_declined",
         "agreement_executed",
         "agreement_locked",
         "kyc_approved",

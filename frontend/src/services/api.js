@@ -76,6 +76,7 @@ const roomToProperty = (room) => ({
   area: room.area || 'N/A',
   image: room.image || room.images?.[0] || '',
   images: room.images || [],
+  roomImages: room.roomImages || [],
   videos: room.videos || [],
   features: room.features || [],
   rating: room.rating ?? 0,
@@ -395,8 +396,8 @@ export const agreementAPI = {
     const response = await api.post(`/agreements/${agreementId}/versions/accept`, { versionNumber, signatureName });
     return response.data;
   },
-  decline: async (agreementId) => {
-    const response = await api.post(`/agreements/${agreementId}/versions/decline`);
+  decline: async (agreementId, versionNumber) => {
+    const response = await api.post(`/agreements/${agreementId}/versions/decline`, { versionNumber });
     return response.data;
   },
   execute: async (agreementId, versionNumber) => {

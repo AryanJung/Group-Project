@@ -68,6 +68,7 @@ const Admin = () => {
   const [formData, setFormData] = useState(emptyForm);
   const [newTagInput, setNewTagInput] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]); // Track cloud upload image target selections
+  const [roomImageFiles, setRoomImageFiles] = useState([]);
 
   // Read URL query params on mount — notification deep-link support
   useEffect(() => {
@@ -211,9 +212,25 @@ const Admin = () => {
     }
   };
 
+  const handleRoomImageChange = (files) => {
+    const nextFiles = Array.from(files || []);
+    if (nextFiles.length > 5) {
+      setRoomImageFiles(nextFiles);
+      setFormError('Please select no more than 5 room images.');
+      return;
+    }
+    setRoomImageFiles(nextFiles);
+    setFormError('');
+  };
+
+  const handleRemoveRoomImage = (indexToRemove) => {
+    setRoomImageFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
   const resetForm = () => {
     setFormData(emptyForm);
     setSelectedFiles([]);
+    setRoomImageFiles([]);
     setEditingProperty(null);
     setShowAddForm(false);
     setFormError('');
@@ -235,6 +252,7 @@ const Admin = () => {
       features: property.features || [],
     });
     setSelectedFiles([]);
+    setRoomImageFiles([]);
     setFormError('');
     setShowAddForm(true);
     setActiveTab('houses');
@@ -269,6 +287,20 @@ const Admin = () => {
       return;
     }
 
+    const existingRoomImageCount = (editingProperty?.roomImages || []).reduce((total, item) => total + (item.images?.length || 0), 0);
+    if (!editingProperty && roomImageFiles.length === 0) {
+      setFormError('Please upload at least one room image.');
+      return;
+    }
+    if (editingProperty && existingRoomImageCount === 0 && roomImageFiles.length === 0) {
+      setFormError('Please upload at least one room image.');
+      return;
+    }
+    if (roomImageFiles.length > 5) {
+      setFormError('Please select no more than 5 room images.');
+      return;
+    }
+
     setSubmitting(true);
     setFormError('');
 
@@ -296,6 +328,10 @@ const Admin = () => {
     // Append standard file streams to match backend middleware definition
     selectedFiles.forEach((file) => {
       multipartData.append('images', file);
+    });
+
+    roomImageFiles.forEach((file) => {
+      multipartData.append('roomImages', file);
     });
 
     try {
@@ -573,6 +609,36 @@ const Admin = () => {
                           rows="5"
                           placeholder="Describe the rooms, neighborhood, access, and house rules."
                         />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group form-group--wide">
+                        <label>Room Images (1–5 images)</label>
+                        <div className="room-image-upload-list">
+                          <div className="room-image-upload-item">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(event) => handleRoomImageChange(event.target.files)}
+                            />
+                            <small>Select 1 to 5 room images. You do not need to upload exactly 5.</small>
+                            {editingProperty?.roomImages?.length > 0 && roomImageFiles.length === 0 && (
+                              <small>{editingProperty.roomImages.reduce((total, item) => total + (item.images?.length || 0), 0)} existing room image(s). Upload new files to replace them.</small>
+                            )}
+                            {roomImageFiles.length > 0 && (
+                              <div className="room-image-preview-grid">
+                                {roomImageFiles.map((file, index) => (
+                                  <div key={`${file.name}-${index}`} className="room-image-preview">
+                                    <img src={URL.createObjectURL(file)} alt={`Selected room ${index + 1}`} />
+                                    <button type="button" onClick={() => handleRemoveRoomImage(index)} aria-label={`Remove room image ${index + 1}`}>×</button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
 

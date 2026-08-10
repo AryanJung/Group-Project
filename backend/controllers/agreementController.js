@@ -66,18 +66,6 @@ const createAgreement = async (req, res) => {
 
     await AuditLog.create({ actor: req.user._id, action: 'agreement_created', resourceType: 'Agreement', resourceId: agreement._id });
 
-    // Notify tenant that an agreement draft exists (landlord created draft)
-    await Notification.create({
-      recipient: agreement.tenant,
-      type: 'agreement_created',
-      room: agreement.room,
-      application: application._id,
-      agreement: agreement._id,
-      agreementVersion: version.versionNumber,
-      fromUser: req.user._id,
-      message: `A rental agreement draft (${agreement.agreementId}) has been created for "${application.room.title}"`,
-    });
-
     const populated = await Agreement.findById(agreement._id).populate('room landlord tenant');
     return res.status(201).json({ agreement: populated, version });
   } catch (error) {
@@ -101,15 +89,17 @@ const createVersion = async (req, res) => {
     }
 
     const { content, changeSummary } = req.body;
+    if (!content?.trim()) return res.status(400).json({ message: 'Version content is required' });
     const nextVersionNumber = agreement.currentVersion + 1;
+    const previousVersion = await AgreementVersion.findOne({ agreement: agreement._id, versionNumber: agreement.currentVersion });
 
     const version = await AgreementVersion.create({
       agreement: agreement._id,
       versionNumber: nextVersionNumber,
-      content,
+      content: content.trim(),
       createdBy: req.user._id,
       changeSummary,
-      previousVersion: undefined,
+      previousVersion: previousVersion?._id,
       status: 'draft',
     });
 
@@ -144,6 +134,11 @@ const sendVersion = async (req, res) => {
 
     if (version.status === 'executed' || version.status === 'locked') {
       return res.status(400).json({ message: 'Cannot send executed/locked version' });
+    }
+
+    const landlordSignature = await Acceptance.findOne({ agreement: agreement._id, version: version._id, role: 'landlord' });
+    if (!landlordSignature) {
+      return res.status(400).json({ message: 'Please sign this version before sending it to the tenant' });
     }
 
     version.status = 'sent';
@@ -376,7 +371,14 @@ const getAgreement = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const versions = await AgreementVersion.find({ agreement: agreement._id }).sort({ versionNumber: 1 });
+    const isTenant = tenantId === uid;
+    const versionQuery = isTenant
+      ? { agreement: agreement._id, status: { $in: ['sent', 'accepted', 'executed', 'locked', 'declined'] } }
+      : { agreement: agreement._id };
+    const versions = await AgreementVersion.find(versionQuery).sort({ versionNumber: 1 });
+    if (isTenant && versions.length === 0) {
+      return res.status(404).json({ message: 'Agreement not found' });
+    }
     const acceptances = await Acceptance.find({ agreement: agreement._id }).populate('user', 'name');
 
     return res.status(200).json({ agreement, versions, acceptances });
@@ -390,8 +392,21 @@ const getAgreement = async (req, res) => {
 const getMyAgreements = async (req, res) => {
   try {
     const uid = req.user._id;
-    const agreements = await Agreement.find({ $or: [{ landlord: uid }, { tenant: uid }] }).populate('room landlord tenant').sort({ createdAt: -1 });
-    return res.status(200).json(agreements);
+    const landlordAgreements = await Agreement.find({ landlord: uid }).populate('room landlord tenant').sort({ createdAt: -1 });
+    const tenantAgreements = await Agreement.find({ tenant: uid }).populate('room landlord tenant').sort({ createdAt: -1 });
+    const visibleTenantAgreements = [];
+
+    for (const agreement of tenantAgreements) {
+      const visibleVersion = await AgreementVersion.exists({
+        agreement: agreement._id,
+        status: { $in: ['sent', 'accepted', 'executed', 'locked', 'declined'] },
+      });
+      if (visibleVersion) visibleTenantAgreements.push(agreement);
+    }
+
+    const agreementsById = new Map();
+    [...landlordAgreements, ...visibleTenantAgreements].forEach((agreement) => agreementsById.set(agreement._id.toString(), agreement));
+    return res.status(200).json([...agreementsById.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
   } catch (error) {
     console.error('getMyAgreements error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
@@ -411,7 +426,19 @@ const getAgreementsByApplication = async (req, res) => {
     }
 
     const agreements = await Agreement.find({ room: application.room, tenant: application.applicant, landlord: application.owner }).populate('room landlord tenant').sort({ createdAt: -1 });
-    return res.status(200).json(agreements);
+    if (application.applicant.toString() !== uid) {
+      return res.status(200).json(agreements);
+    }
+
+    const visibleAgreements = [];
+    for (const agreement of agreements) {
+      const visibleVersion = await AgreementVersion.exists({
+        agreement: agreement._id,
+        status: { $in: ['sent', 'accepted', 'executed', 'locked', 'declined'] },
+      });
+      if (visibleVersion) visibleAgreements.push(agreement);
+    }
+    return res.status(200).json(visibleAgreements);
   } catch (error) {
     console.error('getAgreementsByApplication error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
@@ -428,13 +455,24 @@ const declineVersion = async (req, res) => {
       return res.status(403).json({ message: 'Only tenant can decline the agreement' });
     }
 
+    const versionNumber = req.body.versionNumber || agreement.currentVersion;
+    const version = await AgreementVersion.findOne({ agreement: agreement._id, versionNumber });
+    if (!version) return res.status(404).json({ message: 'Version not found' });
+
+    if (version.status !== 'sent') {
+      return res.status(400).json({ message: 'Only a sent version can be declined' });
+    }
+
+    version.status = 'declined';
+    await version.save();
+
     // mark as declined
     agreement.status = 'declined';
     await agreement.save();
 
-    await AuditLog.create({ actor: req.user._id, action: 'agreement_declined', resourceType: 'Agreement', resourceId: agreement._id });
+    await AuditLog.create({ actor: req.user._id, action: 'agreement_declined', resourceType: 'Agreement', resourceId: agreement._id, metadata: { version: version.versionNumber } });
 
-    await Notification.create({ recipient: agreement.landlord, type: 'agreement_declined', room: agreement.room, agreement: agreement._id, agreementVersion: agreement.currentVersion, fromUser: req.user._id, message: `Tenant declined agreement ${agreement.agreementId}.` });
+    await Notification.create({ recipient: agreement.landlord, type: 'agreement_declined', room: agreement.room, agreement: agreement._id, agreementVersion: version.versionNumber, fromUser: req.user._id, message: `Tenant declined agreement ${agreement.agreementId}.` });
 
     return res.status(200).json({ message: 'Agreement declined' });
   } catch (error) {

@@ -4,6 +4,34 @@ import html2pdf from 'html2pdf.js';
 import { agreementAPI } from '../../services/api';
 import './AgreementView.css';
 
+const formatDateInput = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+};
+
+const formatDisplayDate = (value) => {
+  if (!value) return 'Not specified';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+};
+
+const parseAgreementContent = (content = '') => {
+  const field = (label) => content.match(new RegExp(`^${label}:\\s*([^\\n]+)`, 'im'))?.[1]?.trim() || '';
+  const terms = content.match(/^Terms:\s*\n?([\s\S]*)$/im)?.[1]?.trim() || '';
+  return {
+    rent: field('Rent').replace(/^NPR\s*/i, ''),
+    deposit: field('Deposit').replace(/^NPR\s*/i, ''),
+    startDate: field('Start'),
+    endDate: field('End'),
+    terms,
+  };
+};
+
+const buildAgreementContent = ({ rent, deposit, startDate, endDate, terms }) => (
+  `Rent: NPR ${rent}\nDeposit: NPR ${deposit}\nStart: ${startDate}\nEnd: ${endDate}\n\nTerms:\n${terms}`
+);
+
 const AgreementView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -18,8 +46,13 @@ const AgreementView = () => {
   const [error, setError] = useState('');
   const [selectedVersionNumber, setSelectedVersionNumber] = useState(0);
   const [showNewVersionForm, setShowNewVersionForm] = useState(false);
-  const [newVersionContent, setNewVersionContent] = useState('');
   const [newVersionSummary, setNewVersionSummary] = useState('');
+  const [newVersionRent, setNewVersionRent] = useState('');
+  const [newVersionDeposit, setNewVersionDeposit] = useState('');
+  const [newVersionStartDate, setNewVersionStartDate] = useState('');
+  const [newVersionEndDate, setNewVersionEndDate] = useState('');
+  const [newVersionTerms, setNewVersionTerms] = useState('');
+  const [sendNewVersionAfterCreate, setSendNewVersionAfterCreate] = useState(false);
   const [signatureRole, setSignatureRole] = useState('');
   const [signatureName, setSignatureName] = useState('');
   const [signatureError, setSignatureError] = useState('');
@@ -50,7 +83,6 @@ const AgreementView = () => {
       ? requestedVersion
       : agreement.currentVersion || versions[versions.length - 1]?.versionNumber || 1;
     setSelectedVersionNumber(initialVersion);
-    setNewVersionContent(versions[versions.length - 1]?.content || '');
   }, [agreement, versions, searchParams]);
 
   if (loading) return <div className="agreement-state" role="status">Loading agreement…</div>;
@@ -66,8 +98,9 @@ const AgreementView = () => {
   const tenantSignature = signatureFor('tenant');
   const rentAmount = displayedVersion?.content?.match(/Rent:\s*([^\n]+)/i)?.[1] || 'Not specified';
   const depositAmount = displayedVersion?.content?.match(/Deposit:\s*([^\n]+)/i)?.[1] || 'Not specified';
-  const agreementStart = agreement.effectiveDate ? new Date(agreement.effectiveDate).toLocaleDateString() : 'Not specified';
-  const agreementEnd = agreement.expiryDate ? new Date(agreement.expiryDate).toLocaleDateString() : 'Not specified';
+  const displayedContentFields = parseAgreementContent(displayedVersion?.content);
+  const agreementStart = formatDisplayDate(displayedContentFields.startDate || agreement.effectiveDate);
+  const agreementEnd = formatDisplayDate(displayedContentFields.endDate || agreement.expiryDate);
   const createdDate = agreement.createdAt ? new Date(agreement.createdAt).toLocaleDateString() : 'Not specified';
 
   const refresh = async () => { await loadAgreement(); };
@@ -98,7 +131,7 @@ const AgreementView = () => {
   const handleDecline = async () => {
     if (!window.confirm('Decline this agreement? This will notify the landlord.')) return;
     setActionLoading(true);
-    try { await agreementAPI.decline(agreement._id); alert('Agreement declined. Landlord will be notified.'); await refresh(); }
+    try { await agreementAPI.decline(agreement._id, displayedVersion.versionNumber); alert('Agreement declined. Landlord will be notified.'); await refresh(); }
     catch (e) { alert(e?.response?.data?.message || e.message || 'Failed to decline'); }
     finally { setActionLoading(false); }
   };
@@ -123,11 +156,43 @@ const AgreementView = () => {
     finally { setActionLoading(false); }
   };
   const handleCreateVersion = async () => {
-    if (!newVersionContent) { alert('Please enter content for the new version'); return; }
+    if (!newVersionStartDate || !newVersionEndDate) { alert('Please select tenancy start and end dates'); return; }
     setActionLoading(true);
-    try { await agreementAPI.createVersion(agreement._id, { content: newVersionContent, changeSummary: newVersionSummary }); alert('New version created as draft.'); await refresh(); setShowNewVersionForm(false); }
+    try {
+      const version = await agreementAPI.createVersion(agreement._id, {
+        content: buildAgreementContent({
+          rent: newVersionRent,
+          deposit: newVersionDeposit,
+          startDate: newVersionStartDate,
+          endDate: newVersionEndDate,
+          terms: newVersionTerms,
+        }),
+        changeSummary: newVersionSummary,
+      });
+      if (sendNewVersionAfterCreate) await agreementAPI.sendVersion(agreement._id, version.versionNumber);
+      alert(sendNewVersionAfterCreate ? 'New version created and sent to tenant.' : 'New version created as draft.');
+      await refresh();
+      setSelectedVersionNumber(version.versionNumber);
+      setSearchParams({ version: String(version.versionNumber) });
+      setShowNewVersionForm(false);
+    }
     catch (e) { alert(e?.response?.data?.message || e.message || 'Failed to create version'); }
     finally { setActionLoading(false); }
+  };
+  const openNewVersionForm = () => {
+    if (showNewVersionForm) {
+      setShowNewVersionForm(false);
+      return;
+    }
+    const fields = parseAgreementContent(displayedVersion?.content || '');
+    setNewVersionRent(fields.rent || agreement.room?.rawPrice || '');
+    setNewVersionDeposit(fields.deposit || '');
+    setNewVersionStartDate(formatDateInput(fields.startDate || agreement.effectiveDate));
+    setNewVersionEndDate(formatDateInput(fields.endDate || agreement.expiryDate));
+    setNewVersionTerms(fields.terms || displayedVersion?.content || '');
+    setNewVersionSummary('');
+    setSendNewVersionAfterCreate(false);
+    setShowNewVersionForm(true);
   };
   const handleVersionChange = (event) => {
     const version = Number(event.target.value);
@@ -170,13 +235,12 @@ const AgreementView = () => {
             <p className="agreement-document__reference">Reference {agreement.agreementId}</p>
           </div>
           <div className="agreement-document__meta">
-            <div><span>Version</span><strong>v{displayedVersion?.versionNumber || '—'}</strong></div>
             <div><span>Issue date</span><strong>{createdDate}</strong></div>
           </div>
         </header>
 
         <section className="agreement-document__intro">
-          This agreement records the rental arrangement for the property and parties identified below. The terms in this document are those of version {displayedVersion?.versionNumber || '—'}.
+          This agreement records the rental arrangement for the property and parties identified below.
         </section>
 
         <section className="agreement-document__section">
@@ -220,21 +284,21 @@ const AgreementView = () => {
           {landlordSignature && tenantSignature && <div className="agreement-document__fully-signed">✓ Agreement fully signed</div>}
         </section>
 
-        <footer className="agreement-document__footer">{agreement.agreementId} · Version {displayedVersion?.versionNumber || '—'} · {agreement.status?.replace(/_/g, ' ')}</footer>
+        <footer className="agreement-document__footer">{agreement.agreementId} · {agreement.status?.replace(/_/g, ' ')}</footer>
       </article>
 
       <section className="agreement-workflow no-print">
         <div className="agreement-workflow__header"><h2>Agreement workflow</h2><span className={`agreement-status-badge agreement-status-${agreement.status.replace(/\s+/g, '-').toLowerCase()}`}>{agreement.status.replace(/_/g, ' ')}</span></div>
         <div className="agreement-actions-row">
           <label className="agreement-select-label"><span>Preview version</span><select value={selectedVersionNumber} onChange={handleVersionChange}>{versions.map((version) => <option key={version._id} value={version.versionNumber}>v{version.versionNumber} — {version.status}{version.changeSummary ? ` — ${version.changeSummary}` : ''}</option>)}</select></label>
-          {amLandlord && <button className="btn-outline" onClick={() => setShowNewVersionForm((show) => !show)}>{showNewVersionForm ? 'Cancel New Version' : 'Create New Version'}</button>}
+          {amLandlord && <button className="btn-outline" onClick={openNewVersionForm}>{showNewVersionForm ? 'Cancel New Version' : 'Create New Version'}</button>}
           {amLandlord && displayedVersion?.status === 'draft' && !landlordSignature && <button className="btn-primary" onClick={() => openSignatureModal('landlord')} disabled={actionLoading}>Sign Agreement</button>}
           {amLandlord && landlordSignature && <span className="agreement-signed-status">✓ Signed by {landlordSignature.signatureName || landlordSignature.user?.name}</span>}
-          {amLandlord && displayedVersion?.status === 'draft' && <button className="btn-primary" onClick={() => handleSendVersion(displayedVersion.versionNumber)} disabled={actionLoading}>Send to Tenant</button>}
+          {amLandlord && displayedVersion?.status === 'draft' && landlordSignature && <button className="btn-primary" onClick={() => handleSendVersion(displayedVersion.versionNumber)} disabled={actionLoading}>Send to Tenant</button>}
           {amLandlord && displayedVersion?.status === 'accepted' && <button className="btn-primary" onClick={() => handleExecute(displayedVersion.versionNumber)} disabled={actionLoading}>Execute Agreement</button>}
-          {amTenant && displayedVersion?.status === 'sent' && <>{!tenantSignature ? <button className="btn-primary" onClick={() => openSignatureModal('tenant')} disabled={actionLoading}>Sign Agreement</button> : <span className="agreement-signed-status">✓ Signed by {tenantSignature.signatureName || tenantSignature.user?.name}</span>}<button className="btn-outline" onClick={handleRequestChanges} disabled={actionLoading}>Request Changes</button><button className="btn-danger" onClick={handleDecline} disabled={actionLoading}>Decline</button></>}
+          {amTenant && agreement.status === 'sent' && displayedVersion?.status === 'sent' && <>{!tenantSignature ? <button className="btn-primary" onClick={() => openSignatureModal('tenant')} disabled={actionLoading}>Sign Agreement</button> : <span className="agreement-signed-status">✓ Signed by {tenantSignature.signatureName || tenantSignature.user?.name}</span>}<button className="btn-outline" onClick={handleRequestChanges} disabled={actionLoading}>Request Changes</button><button className="btn-danger" onClick={handleDecline} disabled={actionLoading}>Decline</button></>}
         </div>
-        {showNewVersionForm && amLandlord && <div className="new-version-panel"><label><span>Change summary</span><input type="text" value={newVersionSummary} onChange={(e) => setNewVersionSummary(e.target.value)} /></label><label><span>Version content</span><textarea value={newVersionContent} onChange={(e) => setNewVersionContent(e.target.value)} rows={8} /></label><div className="agreement-actions-row"><button className="btn-outline" onClick={() => setShowNewVersionForm(false)}>Cancel</button><button className="btn-primary" onClick={handleCreateVersion} disabled={actionLoading}>{actionLoading ? 'Creating…' : 'Create Version'}</button></div></div>}
+        {showNewVersionForm && amLandlord && <div className="new-version-panel"><label><span>Change summary</span><input type="text" value={newVersionSummary} onChange={(e) => setNewVersionSummary(e.target.value)} /></label><label><span>Monthly Rent (NPR)</span><input type="number" value={newVersionRent} onChange={(e) => setNewVersionRent(e.target.value)} required /></label><label><span>Security Deposit (NPR)</span><input type="number" value={newVersionDeposit} onChange={(e) => setNewVersionDeposit(e.target.value)} /></label><label><span>Start Date</span><input type="date" value={newVersionStartDate} onChange={(e) => setNewVersionStartDate(e.target.value)} required /></label><label><span>End Date</span><input type="date" value={newVersionEndDate} onChange={(e) => setNewVersionEndDate(e.target.value)} required /></label><label className="new-version-panel__full"><span>Additional Terms</span><textarea value={newVersionTerms} onChange={(e) => setNewVersionTerms(e.target.value)} rows={6} /></label><label className="new-version-panel__checkbox"><input type="checkbox" checked={sendNewVersionAfterCreate} onChange={(e) => setSendNewVersionAfterCreate(e.target.checked)} /><span>Send to tenant after creating</span></label><div className="agreement-actions-row"><button className="btn-outline" onClick={() => setShowNewVersionForm(false)}>Cancel</button><button className="btn-primary" onClick={handleCreateVersion} disabled={actionLoading}>{actionLoading ? 'Creating…' : 'Create Version'}</button></div></div>}
       </section>
 
       {signatureRole && <div className="agreement-signature-modal no-print" role="dialog" aria-modal="true" aria-labelledby="signature-modal-title"><form className="agreement-signature-modal__card" onSubmit={handleSignatureSubmit}><h2 id="signature-modal-title">Sign Agreement</h2><p>By entering your name below, you confirm that you have reviewed and agree to this rental agreement.</p><label><span>Full Name</span><input autoFocus value={signatureName} onChange={(event) => setSignatureName(event.target.value)} placeholder="Enter your full name" /></label>{signatureError && <div className="agreement-signature-modal__error">{signatureError}</div>}<div className="agreement-signature-modal__actions"><button type="button" className="btn-outline" onClick={() => setSignatureRole('')} disabled={actionLoading}>Cancel</button><button type="submit" className="btn-primary" disabled={actionLoading}>{actionLoading ? 'Signing…' : 'Sign & Confirm'}</button></div></form></div>}

@@ -31,6 +31,30 @@ const parseCoordinates = (raw) => {
   return undefined;
 };
 
+const filesFromField = (files, fieldName) => {
+  if (!files) return [];
+  if (Array.isArray(files)) return files.filter((file) => file.fieldname === fieldName);
+  return files[fieldName] || [];
+};
+
+const buildRoomImages = (files, labelsRaw) => {
+  const singleUploadImages = filesFromField(files, 'roomImages').map((file) => file.path);
+  if (singleUploadImages.length > 0) {
+    return [{ label: 'Room Images', images: singleUploadImages }];
+  }
+
+  const labels = Array.isArray(labelsRaw)
+    ? labelsRaw
+    : typeof labelsRaw === 'string'
+      ? [labelsRaw]
+      : [];
+
+  return labels.map((label, index) => ({
+    label: label || `Room ${index + 1}`,
+    images: filesFromField(files, `roomImages-${index}`).map((file) => file.path),
+  }));
+};
+
 // Create a new room
 const createRoom = async (req, res) => {
   try {
@@ -48,15 +72,26 @@ const createRoom = async (req, res) => {
       area,
       image,
       maxRenters,
+      roomImageLabels,
     } = req.body;
 
     let uploadedImages = [];
-    if (req.files && req.files.length > 0) {
-      uploadedImages = req.files.map((file) => file.path);
+    const propertyFiles = filesFromField(req.files, 'images');
+    if (propertyFiles.length > 0) {
+      uploadedImages = propertyFiles.map((file) => file.path);
     }
 
     if (uploadedImages.length === 0) {
       return res.status(400).json({ message: 'Please upload at least one image of the property.' });
+    }
+
+    const uploadedRoomImages = buildRoomImages(req.files, roomImageLabels);
+    const roomImageCount = uploadedRoomImages.reduce((total, item) => total + (item.images?.length || 0), 0);
+    if (roomImageCount === 0) {
+      return res.status(400).json({ message: 'Please upload at least one room image.' });
+    }
+    if (roomImageCount > 5) {
+      return res.status(400).json({ message: 'Please upload no more than 5 room images.' });
     }
 
     const parsedCoords = parseCoordinates(coordinates);
@@ -67,6 +102,7 @@ const createRoom = async (req, res) => {
         description ||
         `${bedrooms || 1} bed, ${bathrooms || 1} bath property in ${location}`,
       images: uploadedImages,
+      roomImages: uploadedRoomImages,
       videos,
       features:
         features ||
@@ -175,6 +211,7 @@ const updateRoom = async (req, res) => {
       area,
       image,
       maxRenters,
+      roomImageLabels,
     } = req.body;
 
     const room = await Room.findById(req.params.id);
@@ -186,8 +223,9 @@ const updateRoom = async (req, res) => {
     if (room.createdBy && room.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized to update this room" });
     }
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map((file) => file.path);
+    const propertyFiles = filesFromField(req.files, 'images');
+    if (propertyFiles.length > 0) {
+      const newImages = propertyFiles.map((file) => file.path);
       // Option A: Replace images completely with new uploads:
       room.images = newImages;
       room.image = newImages[0]; // update main thumbnail
@@ -201,6 +239,10 @@ const updateRoom = async (req, res) => {
     room.description = description || room.description;
     room.images = images || room.images;
     room.videos = videos || room.videos;
+    const uploadedRoomImages = buildRoomImages(req.files, roomImageLabels);
+    if (uploadedRoomImages.some((item) => item.images.length > 0)) {
+      room.roomImages = uploadedRoomImages.filter((item) => item.images.length > 0);
+    }
     room.features = features || room.features;
     room.price = price !== undefined ? parsePrice(price) : room.price;
     room.location = location || room.location;

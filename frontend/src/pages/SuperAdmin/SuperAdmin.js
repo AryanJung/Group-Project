@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './SuperAdmin.css';
 import { superAdminAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { MapModal } from '../PropertyDetail/PropertyDetail';
+import '../PropertyDetail/PropertyDetail.css';
 
 const SuperAdmin = () => {
   const { refreshUser } = useAuth();
@@ -28,6 +30,8 @@ const SuperAdmin = () => {
   // Properties pending approval
   const [pendingProperties, setPendingProperties] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [mapProperty, setMapProperty] = useState(null);
   const [suspendModalUser, setSuspendModalUser] = useState(null);
   const [suspendDuration, setSuspendDuration] = useState(24);
   const [suspensionReason, setSuspensionReason] = useState('');
@@ -431,9 +435,10 @@ const SuperAdmin = () => {
                           </div>
                         )}
                       </div>
-                      <div className="kyc-actions" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <button onClick={() => handleApproveProperty(property._id)}>Approve</button>
-                        <button onClick={() => handleRejectProperty(property._id)}>Reject</button>
+                      <div className="property-review-actions">
+                        <button className="property-review-actions__secondary" onClick={() => setSelectedProperty(property)}>View Details</button>
+                        <button className="property-review-actions__approve" onClick={() => handleApproveProperty(property._id)}>Approve</button>
+                        <button className="property-review-actions__reject" onClick={() => handleRejectProperty(property._id)}>Reject</button>
                       </div>
                     </li>
                   ))}
@@ -543,6 +548,79 @@ const SuperAdmin = () => {
             <img src={selectedImage} alt="Property preview" className="document-modal-image" />
           </div>
         </div>
+      )}
+
+      {selectedProperty && (
+        <div className="document-modal-overlay" onClick={() => setSelectedProperty(null)}>
+          <div className="property-review-modal" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="document-modal-close" onClick={() => setSelectedProperty(null)} aria-label="Close property details">
+              ×
+            </button>
+            <div className="property-review-modal__header">
+              <div>
+                <h2>{selectedProperty.title}</h2>
+                <p>{selectedProperty.location}</p>
+              </div>
+              <button type="button" onClick={() => setMapProperty(selectedProperty)}>
+                View on Map
+              </button>
+            </div>
+            <div className="property-review-modal__grid">
+              {((selectedProperty.images?.length ? selectedProperty.images : [selectedProperty.image]).filter(Boolean)).map((src, index) => (
+                <button key={src + index} type="button" onClick={() => { setSelectedProperty(null); setSelectedImage(src); }}>
+                  <img src={src} alt={`${selectedProperty.title} ${index + 1}`} />
+                </button>
+              ))}
+            </div>
+            <div className="property-review-modal__details">
+              <div><strong>Owner</strong><span>{selectedProperty.createdBy?.name || 'Unknown'} ({selectedProperty.createdBy?.email || 'No email'})</span></div>
+              <div><strong>Price</strong><span>{selectedProperty.price}</span></div>
+              <div><strong>Bedrooms</strong><span>{selectedProperty.bedrooms || 'Not specified'}</span></div>
+              <div><strong>Bathrooms</strong><span>{selectedProperty.bathrooms || 'Not specified'}</span></div>
+              <div><strong>Area</strong><span>{selectedProperty.area || 'Not specified'}</span></div>
+              <div><strong>Max renters</strong><span>{selectedProperty.maxRenters || 1}</span></div>
+            </div>
+            <section>
+              <h3>Description</h3>
+              <p>{selectedProperty.description || 'No description provided.'}</p>
+            </section>
+            {selectedProperty.features?.length > 0 && (
+              <section>
+                <h3>Features</h3>
+                <div className="property-review-modal__tags">
+                  {selectedProperty.features.map((feature) => <span key={feature}>{feature}</span>)}
+                </div>
+              </section>
+            )}
+            {selectedProperty.roomImages?.length > 0 && (
+              <section>
+                <h3>Room Images</h3>
+                <div className="property-review-modal__rooms">
+                  {selectedProperty.roomImages.map((room, roomIndex) => (
+                    <article key={`${room.label || 'room'}-${roomIndex}`}>
+                      <strong>{room.label || `Room ${roomIndex + 1}`}</strong>
+                      <div>
+                        {(room.images || []).map((src, imageIndex) => (
+                          <button key={src + imageIndex} type="button" onClick={() => { setSelectedProperty(null); setSelectedImage(src); }}>
+                            <img src={src} alt={`${room.label || `Room ${roomIndex + 1}`} ${imageIndex + 1}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      )}
+
+      {mapProperty && (
+        <MapModal
+          coordinates={mapProperty.coordinates}
+          locationName={mapProperty.location}
+          onClose={() => setMapProperty(null)}
+        />
       )}
     </div>
   );

@@ -19,7 +19,7 @@ const { getMessages, sendGroupMessage } = require("../controllers/groupChatContr
 
 // Custom wrapper to intercept and safely isolate Multer errors
 const handleUploadMiddleware = (req, res, next) => {
-  const uploadProcessor = upload.array('images', 5);
+  const uploadProcessor = upload.any();
   
   uploadProcessor(req, res, (err) => {
     if (err) {
